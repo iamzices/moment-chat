@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npm test && npm run build && cp dist/index.html dist/404.html
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name == 'push'
+        with: { path: dist }
+  deploy:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
