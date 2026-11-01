@@ -97,6 +97,12 @@ export default function App() {
     return () => { window.removeEventListener('pagehide', onPageHide) }
   }, [engine])
   useEffect(() => {
+    if (state.screen !== 'waiting') return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') engine.cancel() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [engine, state.screen])
+  useEffect(() => {
     const onVisible = () => { if (!document.hidden) setUnread(0) }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
@@ -137,9 +143,9 @@ export default function App() {
           </div>
           <nav className="home-information" aria-label="About and privacy"><Button variant="ghost" onClick={() => setAboutOpen(true)}>About</Button><Button variant="ghost" onClick={() => setPrivacyOpen(true)}>Privacy</Button></nav>
         </div>}
-        {state.screen === 'join' && <div className="flow-card"><Button variant="ghost" size="icon" className="back-button" onClick={() => engine.home()} aria-label="Back to home"><ArrowLeft aria-hidden="true" /></Button><h1 className="sr-only">Join Room</h1><div className="room-code-pill" role="group" aria-label="Room code"><strong>{state.code}</strong></div><form onSubmit={event => { event.preventDefault(); engine.requestJoin(name) }} className="name-form"><Label htmlFor="display-name" className="sr-only">Name</Label><Input id="display-name" className="person-name" maxLength={32} autoComplete="off" value={name} onChange={event => setName(event.target.value)} onFocus={event => event.target.select()} /><Button className="primary-action" type="submit">Request to join<ArrowRight aria-hidden="true" /></Button></form></div>}
+        {state.screen === 'join' && <div className="flow-card"><Button variant="ghost" size="icon" className="back-button" onClick={() => engine.home()} aria-label="Back to home"><ArrowLeft aria-hidden="true" /></Button><h1 className="sr-only">Join Room</h1><div className="room-code-pill" role="group" aria-label="Room code"><strong>{state.code}</strong></div><form onSubmit={event => { event.preventDefault(); engine.requestJoin(name) }} className="name-form"><Label htmlFor="display-name" className="sr-only">Name</Label><Input id="display-name" className="person-name" autoFocus maxLength={32} autoComplete="off" value={name} onChange={event => setName(event.target.value)} onFocus={event => event.target.select()} /><Button className="primary-action" type="submit">Request to join<ArrowRight aria-hidden="true" /></Button></form></div>}
         {state.screen === 'waiting' && <div className="flow-card waiting-card"><p className="waiting-room-code">{state.code}</p><h1 role="status">{state.status === 'connecting' ? 'Connecting…' : 'Waiting for host approval'}</h1><Button className="cancel-button" variant="outline" onClick={() => engine.cancel()}>Cancel</Button></div>}
-        {state.screen === 'outcome' && <div className="outcome-screen"><h1>{outcomes[state.outcome || 'ended']}</h1><Button className="outcome-button" onClick={() => { setJoinCode(''); setName(displayName('')); engine.home() }}>Back to home<ArrowRight aria-hidden="true" /></Button></div>}
+        {state.screen === 'outcome' && <div className="outcome-screen"><h1>{outcomes[state.outcome || 'ended']}</h1><Button className="outcome-button" autoFocus onClick={() => { setJoinCode(''); setName(displayName('')); engine.home() }}>Back to home<ArrowRight aria-hidden="true" /></Button></div>}
       </main>
     </>}
     <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
@@ -168,6 +174,8 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
     const timer = setTimeout(() => setConnected(false), 3000)
     return () => { clearTimeout(timer); setConnected(false) }
   }, [state.status])
+  // Focus the message box on entry, except on touch screens where it would pop up the keyboard over the room.
+  useEffect(() => { if (window.matchMedia?.('(pointer: fine)').matches) textareaRef.current?.focus() }, [])
   useEffect(() => {
     if (!scrolledUp || state.messages.at(-1)?.senderId === state.selfId) messageEnd.current?.scrollIntoView({ block: 'end' })
   }, [state.messages, state.selfId, scrolledUp])

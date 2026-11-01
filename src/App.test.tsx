@@ -9,6 +9,18 @@ beforeEach(() => { history.replaceState(null, '', '/'); vi.spyOn(RoomEngine.prot
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 describe('joining with the single code control', () => {
+  it('cancels a pending join request with Escape', async () => {
+    const user = userEvent.setup()
+    const cancel = vi.spyOn(RoomEngine.prototype, 'cancel').mockImplementation(() => {})
+    vi.mocked(RoomEngine.prototype.requestJoin).mockImplementation(function (this: any) { this.set({ screen: 'waiting' }) })
+    render(<App />)
+    await user.type(screen.getByRole('textbox', { name: 'Room Code or Invite Link' }), 'ab23cd{Enter}')
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+    await user.keyboard('{Escape}')
+    expect(cancel).toHaveBeenCalled()
+  })
+
   it('submits a typed code with Enter and offers an editable, prefilled name', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -17,7 +29,8 @@ describe('joining with the single code control', () => {
     expect(location.pathname).toBe('/AB23CD')
     const name = screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement
     expect(name.value).toMatch(/^User\d{4}$/)
-    await user.click(screen.getByRole('button', { name: 'Request to join' }))
+    expect(document.activeElement).toBe(name)
+    await user.keyboard('{Enter}')
     expect(RoomEngine.prototype.requestJoin).toHaveBeenCalledWith(name.value)
   })
 
