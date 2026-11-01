@@ -8,9 +8,9 @@ interface Member {
   rate: number[]
 }
 interface Pending { connection: DataConnection; name: string; sessionId: string; at: number }
-const initialState = (): RoomState => ({ screen: 'landing', code: '', selfId: '', isHost: false, name: '', status: 'connecting', participants: [], requests: [], messages: [], settings: { autoApprove: false, locked: false }, error: '' })
+const initialState = (): RoomState => ({ screen: 'landing', code: '', selfId: '', isHost: false, name: '', status: 'connecting', participants: [], requests: [], messages: [], settings: { autoApprove: true, locked: false }, error: '' })
 
-// All room state, resume secrets and message buffers exist only in this tab's memory.
+// All room state, resume secrets, and message buffers exist only in this tab's memory.
 export class RoomEngine {
   private state = initialState()
   private listeners = new Set<() => void>()

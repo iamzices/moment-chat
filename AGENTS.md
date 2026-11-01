@@ -10,7 +10,7 @@ Moment: browser-only, peer-to-peer temporary group chat (React 19 + Vite + PeerJ
 ## Privacy invariants (do not break)
 - No message server. Chat payloads travel only over WebRTC data channels.
 - STUN only, **never add TURN servers**: a TURN server could relay chat traffic.
-- No persistence: no localStorage, sessionStorage, cookies, IndexedDB or analytics. Room state, resume tokens and message buffers live only in `RoomEngine` memory.
+- No persistence: Room state, resume tokens, and message buffers live only in `RoomEngine` memory.
 - No new network endpoints or third-party scripts without asking.
 
 ## Architecture

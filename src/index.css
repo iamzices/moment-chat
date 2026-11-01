@@ -33,12 +33,13 @@ svg { flex-shrink: 0; }
 .home-main { padding: 72px 40px; }
 .landing-content { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, 1fr); grid-template-areas: 'intro actions' 'links actions'; gap: 24px clamp(48px, 8vw, 96px); align-items: center; width: 1040px; max-width: 100%; text-align: left; }
 .home-intro { grid-area: intro; min-width: 0; }
-.home-title { display: flex; align-items: center; gap: 16px; margin: 0; font-size: clamp(20px, 2.2vw, 26px); font-weight: 500; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
-.home-title > .brand { width: 132px; }
+.home-title { margin: 0; font-size: clamp(30px, 3.2vw, 40px); font-weight: 500; line-height: 1.15; letter-spacing: -.03em; white-space: nowrap; }
+.home-brand { color: var(--primary); }
 .home-description { max-width: 520px; margin: 24px 0 0; font-size: 16px; line-height: 1.75; color: var(--muted-foreground); }
 .home-actions { grid-area: actions; display: grid; grid-template-columns: 1fr; gap: 16px; width: 100%; max-width: 360px; justify-self: end; }
 .home-information { grid-area: links; display: flex; gap: 8px; margin-left: -12px; }
-.home-information button { min-height: 44px; padding: 0 12px; font-size: 13px; color: var(--muted-foreground); }
+.home-information button { min-height: 44px; padding: 0 12px; font-size: 13px; color: var(--muted-foreground); background: none; text-decoration: underline transparent; text-underline-offset: 4px; transition: text-decoration-color .15s; }
+.home-information button:hover { background: none; color: var(--foreground); text-decoration-color: currentColor; }
 .primary-action { width: 100%; min-height: 50px; padding: 0 18px; justify-content: space-between; font-size: 14px; font-weight: 550; border-radius: 8px; }
 .primary-action svg { width: 17px; height: 17px; }
 .create-action { width: 100%; height: 56px; padding: 0 18px; border-radius: 8px; font-size: 15px; font-weight: 550; }
@@ -46,8 +47,8 @@ svg { flex-shrink: 0; }
 .join-form input { width: 100%; height: 56px; padding: 0 52px 0 16px; border-radius: 8px; background: var(--card); font-size: 14px; }
 .join-form input::placeholder { color: var(--muted-foreground); }
 .join-submit { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; color: var(--primary); }
-.join-form .field-error { text-align: left; margin: 12px 0 0; }
-.field-error, .composer-error { color: var(--foreground); font-size: 12px; line-height: 1.6; margin-top: 12px; }
+.join-form input[aria-invalid="true"] { border-color: #f87171; box-shadow: 0 0 0 1px #f87171; }
+.composer-error { color: var(--foreground); font-size: 12px; line-height: 1.6; margin-top: 12px; }
 .flow-card { position: relative; width: 320px; max-width: 100%; display: flex; align-items: center; flex-direction: column; }
 .back-button { align-self: flex-start; width: 44px; height: 44px; margin-left: -12px; margin-bottom: 20px; color: var(--muted-foreground); }
 .room-code-pill { align-self: flex-start; }
@@ -132,6 +133,8 @@ svg { flex-shrink: 0; }
 .privacy-dialog { max-width: 500px; gap: 24px; }
 .privacy-item h3 { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
 .privacy-item p { font-size: 13px; line-height: 1.7; color: var(--muted-foreground); }
+.about-item { display: grid; gap: 12px; }
+.about-item a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
 .people-dialog { padding: 24px; }
 .people-dialog .people-panel { padding: 0; }
 .people-dialog .panel-section:first-child { padding-top: 0; }
@@ -158,8 +161,7 @@ svg { flex-shrink: 0; }
   .connection-banner { padding: 12px 20px; justify-content: flex-start; }
   .home-main { padding: 48px 24px; }
   .landing-content { width: 480px; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'intro' 'actions' 'links'; gap: 28px; }
-  .home-title { gap: 12px; font-size: clamp(18px, 3.8vw, 24px); }
-  .home-title > .brand { width: clamp(96px, 24vw, 132px); }
+  .home-title { font-size: clamp(26px, 8vw, 34px); }
   .home-actions { max-width: none; gap: 16px; }
   .home-description { font-size: 15px; margin-top: 20px; }
   .join-form input, .rename-row input { font-size: 16px; }

@@ -52,7 +52,7 @@ import { RoomEngine } from './room'
 const engines: RoomEngine[] = []
 const make = () => { const engine = new RoomEngine(); engines.push(engine); return engine }
 const settle = () => vi.advanceTimersByTimeAsync(30)
-async function hostRoom() { const host = make(); host.createRoom(); await settle(); return host }
+async function hostRoom(manual = true) { const host = make(); host.createRoom(); if (manual) host.setAutoApprove(false); await settle(); return host }
 async function request(host: RoomEngine, name = 'Alex') {
   const guest = make(); guest.showJoin(host.getSnapshot().code); guest.requestJoin(name); await settle(); return guest
 }
@@ -111,8 +111,9 @@ describe('host-star room behavior', () => {
     const charlie = await request(host, 'Charlie')
     expect(charlie.getSnapshot().screen).toBe('room')
   })
-  it('admits seven guests and rejects a ninth person, counting the host', async () => {
-    const host = await hostRoom(); host.setAutoApprove(true)
+  it('auto-admits by default: seven guests get in and a ninth person is rejected, counting the host', async () => {
+    const host = await hostRoom(false)
+    expect(host.getSnapshot().settings.autoApprove).toBe(true)
     for (let i = 0; i < 7; i++) expect((await request(host, `Guest${i}`)).getSnapshot().screen).toBe('room')
     const extra = await request(host, 'Extra')
     expect(extra.getSnapshot().outcome).toBe('full')

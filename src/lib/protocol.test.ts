@@ -4,7 +4,7 @@ import { displayName, generateCode, inviteUrl, MAX_MESSAGE_LENGTH, parseRoomCode
 afterEach(() => vi.unstubAllGlobals())
 
 describe('room input boundaries', () => {
-  it('accepts codes, pasted invites and query links, but rejects unrelated URLs', () => {
+  it('accepts codes, pasted invites, and query links, but rejects unrelated URLs', () => {
     expect(parseRoomCode(' ab23cd ')).toBe('AB23CD')
     expect(parseRoomCode('https://chat.zices.com/HLMV2K')).toBe('HLMV2K')
     expect(parseRoomCode('https://chat.zices.com/hlmv2k/')).toBe('HLMV2K')

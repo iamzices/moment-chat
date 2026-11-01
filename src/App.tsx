@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Pencil, WifiOff, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Pencil, Wifi, WifiOff, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -49,12 +49,23 @@ const isMobileLayout = () => window.matchMedia('(max-width: 760px)').matches
 function PrivacyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="moment-dialog privacy-dialog" aria-describedby={undefined}>
     <DialogHeader><DialogTitle>Privacy</DialogTitle></DialogHeader>
-    {[
-      ['Messages', 'Messages are encrypted between browsers. The host forwards them and can read them.'],
-      ['Storage', 'Messages stay in browser memory and clear when you leave or reload. Participants can still copy them or take screenshots. New participants don’t see earlier messages.'],
-      ['Connections', 'Connection services receive connection details, never messages. Room codes may appear in website logs. Participants may see network addresses. Some networks block direct connections.'],
-      ['Room lifetime', 'You have 2 minutes to reconnect. Messages wait in browser memory. The room ends when the host leaves or stays unreachable for 2 minutes.'],
-    ].map(([title, text]) => <div className="privacy-item" key={title}><div><h3>{title}</h3><p>{text}</p></div></div>)}
+    {([
+      ['Data collected', 'Moment does not collect any personal data. There are no accounts, cookies, tracking, or analytics.'],
+      ['Messages', 'Messages are encrypted and never pass through a server. They exist only in browser memory and are deleted when a participant leaves or the room ends.'],
+      ['Third parties', 'The PeerJS signaling service sees room codes and IP addresses. Connection servers run by Google and Twilio see IP addresses. GitHub Pages and Cloudflare, which host the website, may log page requests, including invite links.'],
+      ['Contact', <>Questions can be sent to <a href="mailto:hello@zices.com">hello@zices.com</a>.</>],
+    ] as [string, ReactNode][]).map(([title, text]) => <div className="privacy-item about-item" key={title}><div><h3>{title}</h3><p>{text}</p></div></div>)}
+  </DialogContent></Dialog>
+}
+
+function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
+  const link = (href: string, text: string) => <a href={href} target="_blank" rel="noreferrer">{text}</a>
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="moment-dialog privacy-dialog" aria-describedby={undefined}>
+    <DialogHeader><DialogTitle>About</DialogTitle></DialogHeader>
+    <div className="privacy-item about-item">
+      <p>Moment is a private, temporary chat built and maintained by Zices, an independent software developer. It runs entirely in the browser, with no accounts, no message servers, and nothing kept once a room ends.</p>
+      <p>Moment is {link('https://github.com/iamzices/moment-chat', 'open source on GitHub')}. Find Zices on GitHub as {link('https://github.com/iamzices', '@iamzices')}, or see more projects at {link('https://zices.com', 'zices.com')}.</p>
+    </div>
   </DialogContent></Dialog>
 }
 
@@ -101,7 +112,7 @@ export default function App() {
       <main className={cn('entry-main', state.screen === 'landing' && 'home-main')}>
         {state.screen === 'landing' && <div className="landing-content">
           <div className="home-intro">
-            <h1 className="home-title"><Brand /><span>Chat Rooms</span></h1>
+            <h1 className="home-title"><span className="home-brand">Moment</span> Chat Rooms</h1>
             <p className="home-description">Create a private, temporary chat room in one click. No sign-up. Messages are encrypted between browsers and never sent through a message server.</p>
           </div>
           <div className="home-actions">
@@ -110,18 +121,18 @@ export default function App() {
               <Label htmlFor="room-code" className="sr-only">Room Code or Invite Link</Label>
               <Input id="room-code" value={joinCode} onChange={event => { setJoinCode(event.target.value); setJoinError('') }} onPaste={event => { const pasted = event.clipboardData.getData('text/plain'); if (parseRoomCode(pasted)) { event.preventDefault(); setJoinCode(pasted.trim()); setJoinError('') } }} placeholder="Room Code or Invite Link" autoComplete="off" autoCapitalize="off" spellCheck={false} enterKeyHint="go" aria-invalid={!!joinError} aria-describedby={joinError ? 'join-error' : undefined} />
               <Button type="submit" variant="ghost" size="icon" className="join-submit" aria-label="Join Room"><ArrowRight aria-hidden="true" /></Button>
-              {joinError && <p className="field-error" id="join-error" role="alert">{joinError}</p>}
+              {joinError && <p className="sr-only" id="join-error" role="alert">{joinError}</p>}
             </form>
           </div>
-          <nav className="home-information" aria-label="About and privacy"><Button variant="ghost" onClick={() => setAboutOpen(true)}>About Us</Button><Button variant="ghost" onClick={() => setPrivacyOpen(true)}>Privacy</Button></nav>
+          <nav className="home-information" aria-label="About and privacy"><Button variant="ghost" onClick={() => setAboutOpen(true)}>About</Button><Button variant="ghost" onClick={() => setPrivacyOpen(true)}>Privacy</Button></nav>
         </div>}
         {state.screen === 'join' && <div className="flow-card"><Button variant="ghost" size="icon" className="back-button" onClick={() => engine.home()} aria-label="Back to home"><ArrowLeft aria-hidden="true" /></Button><h1 className="sr-only">Join Room</h1><div className="room-code-pill" role="group" aria-label="Room code"><strong>{state.code}</strong></div><form onSubmit={event => { event.preventDefault(); engine.requestJoin(name) }} className="name-form"><Label htmlFor="display-name" className="sr-only">Name</Label><Input id="display-name" maxLength={32} autoComplete="off" value={name} onChange={event => setName(event.target.value)} onFocus={event => event.target.select()} /><Button className="primary-action" type="submit">Request to join<ArrowRight aria-hidden="true" /></Button></form></div>}
         {state.screen === 'waiting' && <div className="flow-card waiting-card"><p className="waiting-room-code">{state.code}</p><h1 role="status">{state.status === 'connecting' ? 'Connecting…' : 'Waiting for host approval'}</h1><Button className="cancel-button" variant="outline" onClick={() => engine.cancel()}>Cancel</Button></div>}
         {state.screen === 'outcome' && <div className="outcome-screen"><h1>{outcomes[state.outcome || 'ended']}</h1><Button className="outcome-button" onClick={() => { setJoinCode(''); setName(displayName('')); engine.home() }}>Back to home<ArrowRight aria-hidden="true" /></Button></div>}
       </main>
     </>}
+    <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
     <PrivacyDialog open={privacyOpen} onOpenChange={setPrivacyOpen} />
-    <Dialog open={aboutOpen} onOpenChange={setAboutOpen}><DialogContent className="moment-dialog"><DialogHeader><DialogTitle>About Us</DialogTitle><DialogDescription>Moment is a temporary space for text conversations. Create a room, share the link, and choose who joins. Rooms hold up to eight people and end when the host leaves.</DialogDescription></DialogHeader></DialogContent></Dialog>
   </div>
 }
 
@@ -135,7 +146,17 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messageEnd = useRef<HTMLDivElement>(null)
+  const lastStatus = useRef(state.status)
+  const [connected, setConnected] = useState(false)
   const link = inviteUrl(state.code)
+  useEffect(() => {
+    // Briefly confirm the connection instead of letting the "Connecting" banner just vanish.
+    const was = lastStatus.current; lastStatus.current = state.status
+    if (state.status !== 'online' || was === 'online') return
+    setConnected(true)
+    const timer = setTimeout(() => setConnected(false), 3000)
+    return () => { clearTimeout(timer); setConnected(false) }
+  }, [state.status])
   useEffect(() => {
     if (!scrolledUp || state.messages.at(-1)?.senderId === state.selfId) messageEnd.current?.scrollIntoView({ block: 'end' })
   }, [state.messages, state.selfId, scrolledUp])
@@ -159,7 +180,7 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
       </Button>
     </div>}
     <div className="room-workspace"><main className="chat-main">{manualCopy && <div className="manual-copy"><Input aria-label="Invite link" readOnly value={link} onFocus={event => event.target.select()} /><p role="alert">Couldn’t copy the link. Select it and copy it manually.</p></div>}<h1 className="sr-only">Room {state.code}</h1>
-      {state.status !== 'online' && <div className="connection-banner" role="status"><WifiOff aria-hidden="true" /><span>{state.status === 'connecting' ? 'Connecting to the room…' : state.isHost ? 'Reconnecting. New people may be unable to join.' : 'Reconnecting for up to 2 minutes. Your messages will wait.'}</span></div>}
+      {(state.status !== 'online' || connected) && <div className="connection-banner" role="status">{state.status === 'online' ? <Wifi aria-hidden="true" /> : <WifiOff aria-hidden="true" />}<span>{state.status === 'online' ? 'Connected to the room.' : state.status === 'connecting' ? 'Connecting to the room…' : state.isHost ? 'Reconnecting. New people may be unable to join.' : 'Reconnecting for up to 2 minutes. Your messages will wait.'}</span></div>}
       <div className="message-scroll" ref={scrollRef} role="log" aria-label="Room messages" aria-live="polite" aria-relevant="additions" onScroll={() => { const el = scrollRef.current; if (el) setScrolledUp(el.scrollHeight - el.scrollTop - el.clientHeight > 100) }}>
         <div className="message-list">
           {state.messages.map((message, index) => {
@@ -213,8 +234,8 @@ function PeoplePanel({ state, engine, identity, onRemove, onLeave }: { state: Ro
       </div>)}
     </section>}
     {state.isHost && <section className="panel-section">
-      <div className="control-row"><Label htmlFor={`${controlId}-auto-approve`}>Admit everyone</Label><Switch id={`${controlId}-auto-approve`} checked={state.settings.autoApprove} onCheckedChange={value => engine.setAutoApprove(value)} /></div>
-      <div className="control-row"><Label htmlFor={`${controlId}-lock-entry`}>Lock room</Label><Switch id={`${controlId}-lock-entry`} checked={state.settings.locked} onCheckedChange={value => engine.setLocked(value)} /></div>
+      <div className="control-row"><Label htmlFor={`${controlId}-auto-approve`}>Auto Admit</Label><Switch id={`${controlId}-auto-approve`} checked={state.settings.autoApprove} onCheckedChange={value => engine.setAutoApprove(value)} /></div>
+      <div className="control-row"><Label htmlFor={`${controlId}-lock-entry`}>Lock Room</Label><Switch id={`${controlId}-lock-entry`} checked={state.settings.locked} onCheckedChange={value => engine.setLocked(value)} /></div>
     </section>}
     <Button variant="outline" className="leave-action" onClick={onLeave}>{state.isHost ? 'End room' : 'Leave room'}</Button>
   </div>
