@@ -196,16 +196,18 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
   }
   const mobileLayout = useSyncExternalStore(subscribeToLayout, isMobileLayout)
   const identity = <div className="room-identity" role="group" aria-label="Room code"><strong>{state.code}</strong><CopyButton value={link} onFailure={() => setManualCopy(true)} onSuccess={() => setManualCopy(false)} /></div>
-  const controls = <PeoplePanel state={state} engine={engine} identity={!mobileLayout && identity} onRemove={setRemovePerson} />
+  const menu = <RoomMenu state={state} engine={engine} onLeave={() => { if (state.isHost) setEndOpen(true); else engine.leave() }} />
+  const controls = <PeoplePanel state={state} engine={engine} identity={!mobileLayout && <div className="sidebar-top">{identity}{menu}</div>} onRemove={setRemovePerson} />
   return <>
-    <AppHeader><RoomMenu state={state} engine={engine} onLeave={() => { if (state.isHost) setEndOpen(true); else engine.leave() }} /></AppHeader>
+    <div className="room-workspace"><div className="chat-column">
+    <AppHeader>{mobileLayout && menu}</AppHeader>
     {mobileLayout && <div className="room-toolbar">
       {identity}
       <Button variant="ghost" className="people-button" onClick={() => setPeopleOpen(true)} aria-label={`Participants: ${state.participants.length}${state.requests.length ? `. Requests: ${state.requests.length}.` : ''}`}>
         People<span>{state.requests.length > 0 ? `${state.requests.length} waiting` : `${state.participants.length} / ${MAX_PARTICIPANTS}`}</span>
       </Button>
     </div>}
-    <div className="room-workspace"><main className="chat-main">{manualCopy && <div className="manual-copy"><Input aria-label="Invite link" readOnly value={link} onFocus={event => event.target.select()} /><p role="alert">Couldn’t copy the link. Select it and copy it manually.</p></div>}<h1 className="sr-only">Room {state.code}</h1>
+    <main className="chat-main">{manualCopy && <div className="manual-copy"><Input aria-label="Invite link" readOnly value={link} onFocus={event => event.target.select()} /><p role="alert">Couldn’t copy the link. Select it and copy it manually.</p></div>}<h1 className="sr-only">Room {state.code}</h1>
       {(state.status !== 'online' || connected) && <div className="connection-banner" role="status">{state.status === 'online' ? <Wifi aria-hidden="true" /> : <WifiOff aria-hidden="true" />}<span>{state.status === 'online' ? 'Connected to the room.' : state.status === 'connecting' ? 'Connecting to the room…' : state.isHost ? 'Reconnecting. New people may be unable to join.' : 'Reconnecting for up to 2 minutes. Your messages will wait.'}</span></div>}
       <div className="message-scroll" ref={scrollRef} role="log" aria-label="Room messages" aria-live="polite" aria-relevant="additions" onScroll={() => { const el = scrollRef.current; if (el) setScrolledUp(el.scrollHeight - el.scrollTop - el.clientHeight > 100) }}>
         <div className="message-list">
@@ -221,7 +223,7 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
         </div><div ref={messageEnd} />
       </div>
       <div className="composer-area">{scrolledUp && <Button className="latest-button" variant="secondary" onClick={() => { setScrolledUp(false); messageEnd.current?.scrollIntoView({ block: 'end' }) }}><ArrowDown aria-hidden="true" />Latest Messages</Button>}{state.error && state.status === 'online' && <p className="composer-error" role="status">{state.error}</p>}<form className="composer" onSubmit={send}><Label htmlFor="message" className="sr-only">Message</Label><Textarea id="message" ref={textareaRef} placeholder="Message" value={draft} maxLength={MAX_MESSAGE_LENGTH} rows={1} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && matchMedia('(pointer: fine)').matches) { event.preventDefault(); send() } }} /><Button size="icon" type="submit" className="send-button" disabled={!draft.trim()} aria-label="Send message"><ArrowRight aria-hidden="true" /></Button></form>{draft.length >= 3800 && <div className="composer-footer"><span className="message-counter near-limit">{draft.length.toLocaleString()} / 4,000</span></div>}</div>
-    </main>{!mobileLayout && <aside className="desktop-sidebar">{controls}</aside>}</div>
+    </main></div>{!mobileLayout && <aside className="desktop-sidebar">{controls}</aside>}</div>
     {mobileLayout && <Dialog open={peopleOpen} onOpenChange={setPeopleOpen}><DialogContent className="moment-dialog people-dialog" onEscapeKeyDown={event => { if (document.activeElement?.hasAttribute('data-rename')) event.preventDefault() }}><DialogHeader className="sr-only"><DialogTitle>Participants</DialogTitle><DialogDescription>View participants and manage requests to join.</DialogDescription></DialogHeader>{controls}</DialogContent></Dialog>}
     <Dialog open={endOpen} onOpenChange={setEndOpen}><DialogContent className="moment-dialog confirm-dialog"><DialogHeader><DialogTitle>End Room?</DialogTitle><DialogDescription>Everyone will be disconnected and the chat cleared.</DialogDescription></DialogHeader><div className="confirm-actions"><Button variant="outline" onClick={() => setEndOpen(false)}>Cancel</Button><Button onClick={() => { setEndOpen(false); engine.leave() }}>End Room</Button></div></DialogContent></Dialog>
     <Dialog open={!!removePerson} onOpenChange={open => { if (!open) setRemovePerson(null) }}><DialogContent className="moment-dialog confirm-dialog"><DialogHeader><DialogTitle>Remove {removePerson?.name}?</DialogTitle><DialogDescription>They’ll be disconnected and their chat will be cleared.</DialogDescription></DialogHeader><div className="confirm-actions"><Button variant="outline" onClick={() => setRemovePerson(null)}>Cancel</Button><Button onClick={() => { if (removePerson) engine.remove(removePerson.id); setRemovePerson(null) }}>Remove</Button></div></DialogContent></Dialog>
@@ -230,7 +232,7 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
 function PeoplePanel({ state, engine, identity, onRemove }: { state: RoomState; engine: RoomEngine; identity?: ReactNode; onRemove: (person: Participant) => void }) {
   const [renaming, setRenaming] = useState(false)
   return <div className="people-panel">
-    {identity && <section className="panel-section">{identity}</section>}
+    {identity}
     <section className="panel-section">
       <div className="sidebar-heading"><h2>People</h2><span>{`${state.participants.length} / ${MAX_PARTICIPANTS}`}</span></div>
       {state.participants.map(person => person.id === state.selfId && renaming
