@@ -26,3 +26,14 @@ Moment: browser-only, peer-to-peer temporary chatroom (React 19 + Vite + PeerJS)
 - Protocol or engine changes need a matching case in `room.test.ts` or `protocol.test.ts` (tests sit next to the source).
 - Use the `@/` import alias for `src/`. Tailwind v4 is configured in `src/index.css` (`@theme`); there is no tailwind.config.
 - Match the existing dense style. Add no new dependencies without asking.
+
+## Design language
+- Colours come only from the tokens in `:root` in `src/index.css`. No raw hex or rgb in components or rules; derive tints with `color-mix(in srgb, var(--token) N%, transparent)`.
+- High contrast, dark only. Surfaces step up in lightness: `--background` (page) → `--card` (sidebar, bubbles, inputs, dialogs) → `--secondary` (own bubbles, menus, raised controls) → `--accent` (hover).
+- Text: `--foreground` for content and headings; `--muted-foreground` only for secondary details (counts, timestamps, "(you)", "Away"). Keep ≥ 4.5:1 on every surface.
+- `--primary` (#8fd0ff) is the single accent: primary buttons, links, focus, host crown, brand. `--violet` only tints the landing bubbles for own messages. `--danger` only for errors.
+- Borders only on interactive controls (inputs, composer, outline buttons), using `--border`, which keeps ≥ 3:1 on every surface. No decorative dividers: separate sections with spacing or a surface step.
+- People are told apart by name only: no avatars or initial circles. Names (sidebar, message sender, rename and name inputs) always use `--font-mono`. The host is marked with the crown icon, not a pill.
+- Fonts are bundled so every device renders the same: DM Sans (`--font-sans`, everything) and DM Mono (`--font-mono`, names only). Don't add system font fallbacks.
+- No all-caps micro-labels, no outlined pills or badges.
+- Capitalisation: Title Case for buttons, links, toggles, menu items, and headings; sentence case for sentences (descriptions, status, errors).

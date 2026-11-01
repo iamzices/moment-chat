@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Pencil, Wifi, WifiOff, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Crown, Ellipsis, Pencil, Wifi, WifiOff, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -32,8 +32,8 @@ function Bubbles() {
     <span key={i} className={cn('home-bubble', own && 'own')} style={{ left: `${left}%`, width, height, animationDuration: `${seconds}s`, animationDelay: `${-start * seconds}s` }} />)}</div>
 }
 
-function Brand() { return <img className="brand" src="/assets/moment-wordmark.svg?v=2" alt="Moment" width={120} height={24} /> }
-function AppHeader() { return <header className="app-header"><Brand /></header> }
+function Brand() { return <img className="brand" src="/assets/moment-wordmark.svg?v=3" alt="Moment" width={120} height={24} /> }
+function AppHeader({ children }: { children?: ReactNode }) { return <header className="app-header"><Brand />{children}</header> }
 function CopyButton({ value, onFailure, onSuccess }: { value: string; onFailure: () => void; onSuccess: () => void }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   useEffect(() => {
@@ -137,7 +137,7 @@ export default function App() {
           </div>
           <nav className="home-information" aria-label="About and privacy"><Button variant="ghost" onClick={() => setAboutOpen(true)}>About</Button><Button variant="ghost" onClick={() => setPrivacyOpen(true)}>Privacy</Button></nav>
         </div>}
-        {state.screen === 'join' && <div className="flow-card"><Button variant="ghost" size="icon" className="back-button" onClick={() => engine.home()} aria-label="Back to home"><ArrowLeft aria-hidden="true" /></Button><h1 className="sr-only">Join Room</h1><div className="room-code-pill" role="group" aria-label="Room code"><strong>{state.code}</strong></div><form onSubmit={event => { event.preventDefault(); engine.requestJoin(name) }} className="name-form"><Label htmlFor="display-name" className="sr-only">Name</Label><Input id="display-name" maxLength={32} autoComplete="off" value={name} onChange={event => setName(event.target.value)} onFocus={event => event.target.select()} /><Button className="primary-action" type="submit">Request to join<ArrowRight aria-hidden="true" /></Button></form></div>}
+        {state.screen === 'join' && <div className="flow-card"><Button variant="ghost" size="icon" className="back-button" onClick={() => engine.home()} aria-label="Back to home"><ArrowLeft aria-hidden="true" /></Button><h1 className="sr-only">Join Room</h1><div className="room-code-pill" role="group" aria-label="Room code"><strong>{state.code}</strong></div><form onSubmit={event => { event.preventDefault(); engine.requestJoin(name) }} className="name-form"><Label htmlFor="display-name" className="sr-only">Name</Label><Input id="display-name" className="person-name" maxLength={32} autoComplete="off" value={name} onChange={event => setName(event.target.value)} onFocus={event => event.target.select()} /><Button className="primary-action" type="submit">Request to join<ArrowRight aria-hidden="true" /></Button></form></div>}
         {state.screen === 'waiting' && <div className="flow-card waiting-card"><p className="waiting-room-code">{state.code}</p><h1 role="status">{state.status === 'connecting' ? 'Connecting…' : 'Waiting for host approval'}</h1><Button className="cancel-button" variant="outline" onClick={() => engine.cancel()}>Cancel</Button></div>}
         {state.screen === 'outcome' && <div className="outcome-screen"><h1>{outcomes[state.outcome || 'ended']}</h1><Button className="outcome-button" onClick={() => { setJoinCode(''); setName(displayName('')); engine.home() }}>Back to home<ArrowRight aria-hidden="true" /></Button></div>}
       </main>
@@ -181,9 +181,9 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
   }
   const mobileLayout = useSyncExternalStore(subscribeToLayout, isMobileLayout)
   const identity = <div className="room-identity" role="group" aria-label="Room code"><strong>{state.code}</strong><CopyButton value={link} onFailure={() => setManualCopy(true)} onSuccess={() => setManualCopy(false)} /></div>
-  const controls = <PeoplePanel state={state} engine={engine} identity={!mobileLayout && identity} onRemove={setRemovePerson} onLeave={() => { setPeopleOpen(false); if (state.isHost) setEndOpen(true); else engine.leave() }} />
+  const controls = <PeoplePanel state={state} engine={engine} identity={!mobileLayout && identity} onRemove={setRemovePerson} />
   return <>
-    <AppHeader />
+    <AppHeader><RoomMenu state={state} engine={engine} onLeave={() => { if (state.isHost) setEndOpen(true); else engine.leave() }} /></AppHeader>
     {mobileLayout && <div className="room-toolbar">
       {identity}
       <Button variant="ghost" className="people-button" onClick={() => setPeopleOpen(true)} aria-label={`Participants: ${state.participants.length}${state.requests.length ? `. Requests: ${state.requests.length}.` : ''}`}>
@@ -200,20 +200,19 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
             const previous = state.messages[index - 1]
             const grouped = previous && !previous.system && previous.senderId === message.senderId && message.time - previous.time < 60_000
             return <div key={message.id} className={cn('message-row', own && 'own-message', grouped && 'grouped-message')}>
-              <div className="message-content">{!grouped && <div className="message-meta">{!own && <span>{message.name}</span>}<time dateTime={new Date(message.time).toISOString()}>{new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>}<div className={cn('message-bubble', message.pending && 'pending-message')}>{message.text}</div>{message.pending && state.status === 'online' && <span className="pending-caption">Sending…</span>}</div>
+              <div className="message-content">{!grouped && <div className="message-meta">{!own && <span className="person-name">{message.name}</span>}<time dateTime={new Date(message.time).toISOString()}>{new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>}<div className={cn('message-bubble', message.pending && 'pending-message')}>{message.text}</div>{message.pending && state.status === 'online' && <span className="pending-caption">Sending…</span>}</div>
             </div>
           })}
         </div><div ref={messageEnd} />
       </div>
       <div className="composer-area">{scrolledUp && <Button className="latest-button" variant="secondary" onClick={() => { setScrolledUp(false); messageEnd.current?.scrollIntoView({ block: 'end' }) }}><ArrowDown aria-hidden="true" />Latest messages</Button>}{state.error && state.status === 'online' && <p className="composer-error" role="status">{state.error}</p>}<form className="composer" onSubmit={send}><Label htmlFor="message" className="sr-only">Message</Label><Textarea id="message" ref={textareaRef} placeholder="Message" value={draft} maxLength={MAX_MESSAGE_LENGTH} rows={1} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && matchMedia('(pointer: fine)').matches) { event.preventDefault(); send() } }} /><Button size="icon" type="submit" className="send-button" disabled={!draft.trim()} aria-label="Send message"><ArrowRight aria-hidden="true" /></Button></form>{draft.length >= 3800 && <div className="composer-footer"><span className="message-counter near-limit">{draft.length.toLocaleString()} / 4,000</span></div>}</div>
     </main>{!mobileLayout && <aside className="desktop-sidebar">{controls}</aside>}</div>
-    {mobileLayout && <Dialog open={peopleOpen} onOpenChange={setPeopleOpen}><DialogContent className="moment-dialog people-dialog" onEscapeKeyDown={event => { if (document.activeElement?.hasAttribute('data-rename')) event.preventDefault() }}><DialogHeader className="sr-only"><DialogTitle>Participants and room controls</DialogTitle><DialogDescription>View participants and manage requests to join.</DialogDescription></DialogHeader>{controls}</DialogContent></Dialog>}
+    {mobileLayout && <Dialog open={peopleOpen} onOpenChange={setPeopleOpen}><DialogContent className="moment-dialog people-dialog" onEscapeKeyDown={event => { if (document.activeElement?.hasAttribute('data-rename')) event.preventDefault() }}><DialogHeader className="sr-only"><DialogTitle>Participants</DialogTitle><DialogDescription>View participants and manage requests to join.</DialogDescription></DialogHeader>{controls}</DialogContent></Dialog>}
     <Dialog open={endOpen} onOpenChange={setEndOpen}><DialogContent className="moment-dialog confirm-dialog"><DialogHeader><DialogTitle>End room?</DialogTitle><DialogDescription>Everyone will be disconnected and the chat cleared.</DialogDescription></DialogHeader><div className="confirm-actions"><Button variant="outline" onClick={() => setEndOpen(false)}>Cancel</Button><Button onClick={() => { setEndOpen(false); engine.leave() }}>End room</Button></div></DialogContent></Dialog>
     <Dialog open={!!removePerson} onOpenChange={open => { if (!open) setRemovePerson(null) }}><DialogContent className="moment-dialog confirm-dialog"><DialogHeader><DialogTitle>Remove {removePerson?.name}?</DialogTitle><DialogDescription>They’ll be disconnected and their chat will be cleared.</DialogDescription></DialogHeader><div className="confirm-actions"><Button variant="outline" onClick={() => setRemovePerson(null)}>Cancel</Button><Button onClick={() => { if (removePerson) engine.remove(removePerson.id); setRemovePerson(null) }}>Remove</Button></div></DialogContent></Dialog>
   </>
 }
-function PeoplePanel({ state, engine, identity, onRemove, onLeave }: { state: RoomState; engine: RoomEngine; identity?: ReactNode; onRemove: (person: Participant) => void; onLeave: () => void }) {
-  const controlId = useId()
+function PeoplePanel({ state, engine, identity, onRemove }: { state: RoomState; engine: RoomEngine; identity?: ReactNode; onRemove: (person: Participant) => void }) {
   const [renaming, setRenaming] = useState(false)
   return <div className="people-panel">
     {identity && <section className="panel-section">{identity}</section>}
@@ -229,10 +228,11 @@ function PeoplePanel({ state, engine, identity, onRemove, onLeave }: { state: Ro
               if (event.key === 'Escape') { event.currentTarget.value = state.name; event.currentTarget.blur() }
             }} />
         </div>
-        : <div className="participant" key={person.id}>
+        : <div className={cn('participant', person.away && 'away')} key={person.id}>
           <span className="participant-name">{person.name}{person.id === state.selfId && <em> (you)</em>}</span>
+          {person.host && <Crown className="host-mark" role="img" aria-label="Host" />}
+          {person.away && <small>Away</small>}
           {state.isHost && person.host && <Button variant="ghost" size="icon" className="icon-action" onClick={() => setRenaming(true)} aria-label="Change your name"><Pencil aria-hidden="true" /></Button>}
-          {person.away ? <small>Away</small> : person.host && <small>Host</small>}
           {state.isHost && !person.host && <Button variant="ghost" size="icon" className="icon-action" onClick={() => onRemove(person)} aria-label={`Remove ${person.name}`}><X aria-hidden="true" /></Button>}
         </div>)}
     </section>
@@ -244,10 +244,21 @@ function PeoplePanel({ state, engine, identity, onRemove, onLeave }: { state: Ro
         <Button variant="ghost" size="icon" className="icon-action admit-action" onClick={() => engine.admit(request.id)} aria-label={`Admit ${request.name}`}><Check aria-hidden="true" /></Button>
       </div>)}
     </section>}
-    {state.isHost && <section className="panel-section">
-      <div className="control-row"><Label htmlFor={`${controlId}-auto-approve`}>Auto Admit</Label><Switch id={`${controlId}-auto-approve`} checked={state.settings.autoApprove} onCheckedChange={value => engine.setAutoApprove(value)} /></div>
-      <div className="control-row"><Label htmlFor={`${controlId}-lock-entry`}>Lock Room</Label><Switch id={`${controlId}-lock-entry`} checked={state.settings.locked} onCheckedChange={value => engine.setLocked(value)} /></div>
-    </section>}
-    <Button variant="outline" className="leave-action" onClick={onLeave}>{state.isHost ? 'End room' : 'Leave room'}</Button>
   </div>
+}
+
+// Room settings live behind a ⋯ button, using the native popover (light dismiss and Escape for free).
+function RoomMenu({ state, engine, onLeave }: { state: RoomState; engine: RoomEngine; onLeave: () => void }) {
+  const id = useId()
+  const menu = useRef<HTMLDivElement>(null)
+  return <>
+    <Button variant="ghost" size="icon" className="room-menu-button" popoverTarget={`${id}menu`} aria-label="Room settings"><Ellipsis aria-hidden="true" /></Button>
+    <div ref={menu} id={`${id}menu`} popover="auto" className="room-menu">
+      {state.isHost && <>
+        <div className="control-row"><Label htmlFor={`${id}auto-approve`}>Auto Admit</Label><Switch id={`${id}auto-approve`} checked={state.settings.autoApprove} onCheckedChange={value => engine.setAutoApprove(value)} /></div>
+        <div className="control-row"><Label htmlFor={`${id}lock-entry`}>Lock Room</Label><Switch id={`${id}lock-entry`} checked={state.settings.locked} onCheckedChange={value => engine.setLocked(value)} /></div>
+      </>}
+      <Button variant="outline" className="leave-action" onClick={() => { menu.current?.hidePopover(); onLeave() }}>{state.isHost ? 'End room' : 'Leave room'}</Button>
+    </div>
+  </>
 }
