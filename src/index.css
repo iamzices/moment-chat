@@ -141,7 +141,11 @@ svg { flex-shrink: 0; }
 .moment-dialog h2 { font-size: 21px; line-height: 1.4; font-weight: 500; padding-right: 24px; }
 .moment-dialog [class*="text-muted-foreground"] { font-size: 14px; line-height: 1.6; }
 .moment-dialog > div:first-of-type { text-align: left; }
-.privacy-dialog { max-width: 500px; gap: 24px; }
+.info-dialog { width: calc(100% - 32px); max-width: 500px; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 0; border-radius: 12px; overflow-y: auto; background: var(--card); color: var(--foreground); }
+.info-dialog::backdrop { background: color-mix(in srgb, var(--background) 80%, transparent); }
+.info-dialog-body { display: grid; gap: 24px; padding: 28px; }
+.info-dialog h2 { font-size: 21px; line-height: 1.4; font-weight: 500; padding-right: 24px; }
+.dialog-close { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; }
 .privacy-item h3 { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
 .privacy-item p { font-size: 13px; line-height: 1.7; color: var(--muted-foreground); }
 .about-item { display: grid; gap: 12px; }

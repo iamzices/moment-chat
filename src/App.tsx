@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode, type RefObject } from 'react'
 import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Crown, Ellipsis, Pencil, Wifi, WifiOff, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,34 +56,41 @@ function subscribeToLayout(listener: () => void) {
 }
 const isMobileLayout = () => window.matchMedia('(max-width: 760px)').matches
 
-function PrivacyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="moment-dialog privacy-dialog" aria-describedby={undefined}>
-    <DialogHeader><DialogTitle>Privacy</DialogTitle></DialogHeader>
+// Native <dialog>: its content stays in the page while closed (so search engines index it), and the browser handles focus, Escape, and the top layer.
+function InfoDialog({ dialogRef, title, children }: { dialogRef: RefObject<HTMLDialogElement | null>; title: string; children: ReactNode }) {
+  const id = useId()
+  return <dialog ref={dialogRef} className="info-dialog" aria-labelledby={id} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close() }}>
+    <Button variant="ghost" size="icon" className="dialog-close" onClick={() => dialogRef.current?.close()} aria-label="Close"><X aria-hidden="true" /></Button>
+    <div className="info-dialog-body"><h2 id={id}>{title}</h2>{children}</div>
+  </dialog>
+}
+
+function PrivacyDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
+  return <InfoDialog dialogRef={dialogRef} title="Privacy">
     {([
       ['Data Collected', 'Moment does not collect any personal data. There are no accounts, cookies, tracking, or analytics.'],
       ['Messages', 'Messages are encrypted and never pass through a server. They exist only in browser memory and are deleted when a participant leaves or the room ends.'],
       ['Third Parties', 'The PeerJS signaling service sees room codes and IP addresses. Connection servers run by Google and Twilio see IP addresses. GitHub Pages and Cloudflare, which host the website, may log page requests, including invite links.'],
       ['Contact', <>Questions can be sent to <a href="mailto:hello@zices.com">hello@zices.com</a>.</>],
     ] as [string, ReactNode][]).map(([title, text]) => <div className="privacy-item about-item" key={title}><div><h3>{title}</h3><p>{text}</p></div></div>)}
-  </DialogContent></Dialog>
+  </InfoDialog>
 }
 
-function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
+function AboutDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
   const link = (href: string, text: string) => <a href={href} target="_blank" rel="noreferrer">{text}</a>
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="moment-dialog privacy-dialog" aria-describedby={undefined}>
-    <DialogHeader><DialogTitle>About</DialogTitle></DialogHeader>
+  return <InfoDialog dialogRef={dialogRef} title="About">
     <div className="privacy-item about-item">
       <p>Moment is a private, temporary chat room built and maintained by Zices. It runs entirely in the browser, with no accounts, no message servers, and nothing kept once a room ends.</p>
       <p>Moment is {link('https://github.com/iamzices/moment-chat', 'open source on GitHub')}. Find Zices on GitHub as {link('https://github.com/iamzices', '@iamzices')}, or see more projects at {link('https://zices.com', 'zices.com')}.</p>
     </div>
-  </DialogContent></Dialog>
+  </InfoDialog>
 }
 
 export default function App() {
   const [engine] = useState(() => new RoomEngine())
   const state = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
-  const [privacyOpen, setPrivacyOpen] = useState(false)
-  const [aboutOpen, setAboutOpen] = useState(false)
+  const privacyRef = useRef<HTMLDialogElement>(null)
+  const aboutRef = useRef<HTMLDialogElement>(null)
   const [joinCode, setJoinCode] = useState('')
   const [joinError, setJoinError] = useState('')
   const [name, setName] = useState(() => displayName(''))
@@ -141,15 +148,15 @@ export default function App() {
               {joinError && <p className="sr-only" id="join-error" role="alert">{joinError}</p>}
             </form>
           </div>
-          <nav className="home-information" aria-label="About and privacy"><Button variant="ghost" onClick={() => setAboutOpen(true)}>About</Button><Button variant="ghost" onClick={() => setPrivacyOpen(true)}>Privacy</Button></nav>
+          <nav className="home-information" aria-label="About and privacy"><Button variant="ghost" onClick={() => aboutRef.current?.showModal()}>About</Button><Button variant="ghost" onClick={() => privacyRef.current?.showModal()}>Privacy</Button></nav>
         </div>}
         {state.screen === 'join' && <div className="flow-card"><Button variant="ghost" size="icon" className="back-button" onClick={() => engine.home()} aria-label="Back to home"><ArrowLeft aria-hidden="true" /></Button><h1 className="sr-only">Join Room</h1><div className="room-code-pill" role="group" aria-label="Room code"><strong>{state.code}</strong></div><form onSubmit={event => { event.preventDefault(); engine.requestJoin(name) }} className="name-form"><Label htmlFor="display-name" className="sr-only">Name</Label><Input id="display-name" className="person-name" autoFocus maxLength={32} autoComplete="off" value={name} onChange={event => setName(event.target.value)} onFocus={event => event.target.select()} /><Button className="primary-action" type="submit">Request to Join<ArrowRight aria-hidden="true" /></Button></form></div>}
         {state.screen === 'waiting' && <div className="flow-card waiting-card"><p className="waiting-room-code">{state.code}</p><h1 role="status">{state.status === 'connecting' ? 'Connecting…' : 'Waiting for host approval'}</h1><Button className="cancel-button" variant="outline" onClick={() => engine.cancel()}>Cancel</Button></div>}
         {state.screen === 'outcome' && <div className="outcome-screen"><h1>{outcomes[state.outcome || 'ended']}</h1><Button className="outcome-button" autoFocus onClick={() => { setJoinCode(''); setName(displayName('')); engine.home() }}>Back to Home<ArrowRight aria-hidden="true" /></Button></div>}
       </main>
     </>}
-    <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
-    <PrivacyDialog open={privacyOpen} onOpenChange={setPrivacyOpen} />
+    <AboutDialog dialogRef={aboutRef} />
+    <PrivacyDialog dialogRef={privacyRef} />
   </div>
 }
 
