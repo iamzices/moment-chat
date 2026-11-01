@@ -130,7 +130,7 @@ describe('host-star room behavior', () => {
     expect(guests.filter(guest => guest.getSnapshot().screen === 'room')).toHaveLength(7)
     expect(guests[7].getSnapshot().outcome).toBe('full')
   })
-  it('lets the host rename and shares the new name', async () => {
+  it('lets the host and guests rename themselves and shares the new name', async () => {
     const host = await hostRoom(), alex = await join(host)
     host.rename('  Cara  '); host.rename('   '); await settle()
     expect(host.getSnapshot().name).toBe('Cara')
@@ -138,7 +138,13 @@ describe('host-star room behavior', () => {
     expect(alex.getSnapshot().messages.at(-1)?.text).toMatch(/ is now Cara\.$/)
     host.sendMessage('hi'); await settle()
     expect(alex.getSnapshot().messages.at(-1)?.name).toBe('Cara')
-    alex.rename('Hacker'); expect(alex.getSnapshot().name).toBe('Alex')
+    alex.rename('  Dana  '); await settle()
+    expect(alex.getSnapshot().name).toBe('Dana')
+    expect(host.getSnapshot().participants.find(p => p.id === alex.getSnapshot().selfId)?.name).toBe('Dana')
+    expect(alex.getSnapshot().participants.find(p => p.id === alex.getSnapshot().selfId)?.name).toBe('Dana')
+    expect(host.getSnapshot().messages.at(-1)?.text).toBe('Alex is now Dana.')
+    alex.sendMessage('hello'); await settle()
+    expect(host.getSnapshot().messages.at(-1)?.name).toBe('Dana')
   })
   it('removes a participant and ends every remaining connection', async () => {
     const host = await hostRoom(), alex = await join(host), bob = await join(host, 'Bob')

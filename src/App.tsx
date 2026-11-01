@@ -240,7 +240,7 @@ function PeoplePanel({ state, engine, identity, onRemove }: { state: RoomState; 
           <span className="participant-name">{person.name}{person.id === state.selfId && <em> (you)</em>}</span>
           {person.host && <Crown className="host-mark" role="img" aria-label="Host" />}
           {person.away && <small>Away</small>}
-          {state.isHost && person.host && <Button variant="ghost" size="icon" className="icon-action" onClick={() => setRenaming(true)} aria-label="Change your name"><Pencil aria-hidden="true" /></Button>}
+          {person.id === state.selfId && <Button variant="ghost" size="icon" className="icon-action" onClick={() => setRenaming(true)} aria-label="Change your name"><Pencil aria-hidden="true" /></Button>}
           {state.isHost && !person.host && <Button variant="ghost" size="icon" className="icon-action" onClick={() => onRemove(person)} aria-label={`Remove ${person.name}`}><X aria-hidden="true" /></Button>}
         </div>)}
     </section>

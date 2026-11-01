@@ -195,7 +195,9 @@ export class RoomEngine {
   }
   rename(name: string) {
     const old = this.state.name, clean = displayName(name)
-    if (!this.state.isHost || !name.trim() || clean === old) return
+    if (!name.trim() || clean === old) return
+    // Guests ask the host, which owns the roster; the host announces the change to everyone.
+    if (!this.state.isHost) { if (this.send(this.hostConnection, { type: 'rename', name: clean })) this.set({ name: clean }); return }
     this.set({ name: clean }); this.broadcastRoster(); this.system(`${old} is now ${clean}.`)
   }
   remove(id: string) {
@@ -209,6 +211,13 @@ export class RoomEngine {
     if (data.type === 'ack' && validId(data.id)) { member.deliveries.delete(data.id); return }
     if (data.type === 'leave') {
       this.members.delete(member.participant.id); member.connection?.close(); this.broadcastRoster(); this.system(`${member.participant.name} left.`); return
+    }
+    if (data.type === 'rename' && typeof data.name === 'string' && data.name.trim()) {
+      const old = member.participant.name, clean = displayName(data.name)
+      member.rate = member.rate.filter(time => time > Date.now() - 10_000)
+      if (clean === old || member.rate.length >= 40) return
+      member.rate.push(Date.now())
+      member.participant.name = clean; this.broadcastRoster(); this.system(`${old} is now ${clean}.`); return
     }
     if (data.type !== 'message' || !validText(data.text) || !validId(data.clientId)) return
     const existing = member.seen.get(data.clientId)
