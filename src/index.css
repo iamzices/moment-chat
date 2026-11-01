@@ -36,7 +36,11 @@ svg { flex-shrink: 0; }
 .home-title { margin: 0; font-size: clamp(30px, 3.2vw, 40px); font-weight: 500; line-height: 1.15; letter-spacing: -.03em; white-space: nowrap; }
 .home-brand { color: var(--primary); }
 .home-description { max-width: 520px; margin: 24px 0 0; font-size: 16px; line-height: 1.75; color: var(--muted-foreground); }
-.home-actions { grid-area: actions; display: grid; grid-template-columns: 1fr; gap: 16px; width: 100%; max-width: 360px; justify-self: end; }
+.home-actions { grid-area: actions; display: grid; grid-template-columns: 1fr; gap: 16px; width: 100%; max-width: 300px; justify-self: end; }
+.home-bubbles { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.home-bubble { position: absolute; bottom: -90px; border-radius: 22px 22px 22px 6px; background: rgb(166 218 255 / .12); filter: blur(2px); opacity: 0; will-change: transform, opacity; animation: bubble-rise linear infinite; }
+.home-bubble.own { border-radius: 22px 22px 6px 22px; background: rgb(150 120 255 / .13); }
+@keyframes bubble-rise { 0% { transform: translateY(0); opacity: 0; } 12%, 80% { opacity: 1; } 100% { transform: translateY(calc(-100vh - 180px)); opacity: 0; } }
 .home-information { grid-area: links; display: flex; gap: 8px; margin-left: -12px; }
 .home-information button { min-height: 44px; padding: 0 12px; font-size: 13px; color: var(--muted-foreground); background: none; text-decoration: underline transparent; text-underline-offset: 4px; transition: text-decoration-color .15s; }
 .home-information button:hover { background: none; color: var(--foreground); text-decoration-color: currentColor; }
@@ -166,4 +170,4 @@ svg { flex-shrink: 0; }
   .home-description { font-size: 15px; margin-top: 20px; }
   .join-form input, .rename-row input { font-size: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } .home-bubbles { display: none; } }

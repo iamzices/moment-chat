@@ -22,6 +22,16 @@ const outcomes: Record<Outcome, string> = {
   left: 'You left the room.',
 }
 
+// Decorative chat bubbles that slowly rise behind the landing page: [left %, width, height, seconds, start progress, own message].
+const bubbles: [number, number, number, number, number, boolean?][] = [
+  [6, 220, 64, 64, .1], [18, 150, 50, 74, .55, true], [34, 190, 58, 58, .8], [52, 130, 46, 80, .3, true],
+  [66, 240, 68, 68, .65], [80, 160, 52, 62, .05, true], [90, 200, 60, 76, .45],
+]
+function Bubbles() {
+  return <div className="home-bubbles" aria-hidden="true">{bubbles.map(([left, width, height, seconds, start, own], i) =>
+    <span key={i} className={cn('home-bubble', own && 'own')} style={{ left: `${left}%`, width, height, animationDuration: `${seconds}s`, animationDelay: `${-start * seconds}s` }} />)}</div>
+}
+
 function Brand() { return <img className="brand" src="/assets/moment-wordmark.svg?v=2" alt="Moment" width={120} height={24} /> }
 function AppHeader() { return <header className="app-header"><Brand /></header> }
 function CopyButton({ value, onFailure, onSuccess }: { value: string; onFailure: () => void; onSuccess: () => void }) {
@@ -110,6 +120,7 @@ export default function App() {
     {state.screen === 'room' ? <Room state={state} engine={engine} /> : <>
       {state.screen !== 'landing' && <AppHeader />}
       <main className={cn('entry-main', state.screen === 'landing' && 'home-main')}>
+        {state.screen === 'landing' && <Bubbles />}
         {state.screen === 'landing' && <div className="landing-content">
           <div className="home-intro">
             <h1 className="home-title"><span className="home-brand">Moment</span> Chat Rooms</h1>
