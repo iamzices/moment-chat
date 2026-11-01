@@ -80,7 +80,7 @@ function AboutDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | n
   const link = (href: string, text: string) => <a href={href} target="_blank" rel="noreferrer">{text}</a>
   return <InfoDialog dialogRef={dialogRef} title="About">
     <div className="privacy-item about-item">
-      <p>Moment is a private, temporary chat room built and maintained by Zices. It runs entirely in the browser, with no accounts, no message servers, and nothing kept once a room ends.</p>
+      <p>Moment is a private, temporary chat room built and maintained by Zices. No data is collected or stored. Messages travel peer-to-peer over WebRTC with {link('https://peerjs.com/', 'PeerJS')}.</p>
       <p>Moment is {link('https://github.com/iamzices/moment-chat', 'open source on GitHub')}. Find Zices on GitHub as {link('https://github.com/iamzices', '@iamzices')}, or see more projects at {link('https://zices.com', 'zices.com')}.</p>
     </div>
   </InfoDialog>
@@ -137,7 +137,7 @@ export default function App() {
         {state.screen === 'landing' && <div className="landing-content">
           <div className="home-intro">
             <h1 className="home-title"><span className="home-brand">Moment</span> Chat Rooms</h1>
-            <p className="home-description">Create a private, temporary chat room in one click. No sign-up. Messages are encrypted between browsers and never sent through a message server.</p>
+            <p className="home-description">Create a private, temporary chat room in one click. No sign-up. No data is collected or stored.</p>
           </div>
           <div className="home-actions">
             <Button className="create-action" onClick={() => { setName(displayName('')); engine.createRoom() }}>Create Room</Button>

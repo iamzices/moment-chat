@@ -1,9 +1,10 @@
 # Moment
 
 [![CI](https://github.com/iamzices/moment-chat/actions/workflows/ci.yml/badge.svg)](https://github.com/iamzices/moment-chat/actions/workflows/ci.yml)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fchat.zices.com&label=chat.zices.com)](https://chat.zices.com)
 [![License: MIT](https://img.shields.io/github/license/iamzices/moment-chat)](LICENSE)
 
-[Moment](https://chat.zices.com) is a private, temporary chat room that runs in the browser. Messages travel peer-to-peer over WebRTC with [PeerJS](https://peerjs.com/) and are never sent through a message server.
+[Moment](https://chat.zices.com) is a private, temporary chat room that runs in the browser. No data is collected or stored. Messages travel peer-to-peer over WebRTC with [PeerJS](https://peerjs.com/).
 
 ![A Moment chat room with two people](assets/preview.png)
 
