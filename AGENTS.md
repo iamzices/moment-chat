@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Moment: browser-only, peer-to-peer temporary chatroom (React 19 + Vite + PeerJS). Deployed to GitHub Pages at chat.zices.com.
+Moment: browser-only, peer-to-peer temporary chat room (React 19 + Vite + PeerJS). Deployed to GitHub Pages at chat.zices.com.
 
 ## Commands
 - `npm run dev` (127.0.0.1:5173, strict port)
