@@ -17,7 +17,8 @@ function toBase64(bytes: Uint8Array) {
 }
 const MAX_CHUNK_TEXT = Math.ceil(FILE_CHUNK / 3) * 4
 interface Pending { connection: DataConnection; name: string; sessionId: string; at: number }
-const initialState = (): RoomState => ({ screen: 'landing', code: '', selfId: '', isHost: false, name: '', status: 'connecting', participants: [], requests: [], messages: [], settings: { autoApprove: true, locked: false }, error: '' })
+const hostState = (name: string) => { const selfId = crypto.randomUUID(); return { screen: 'room', isHost: true, selfId, name, participants: [{ id: selfId, name, host: true, away: false }] } satisfies Partial<RoomState> }
+const initialState = (): RoomState =>({ screen: 'landing', code: '', selfId: '', isHost: false, name: '', status: 'connecting', participants: [], requests: [], messages: [], settings: { autoApprove: true, locked: false }, error: '' })
 
 /**
  * Run one tab's side of a room: hosting or joining, the roster, messages and file transfers.
@@ -78,7 +79,9 @@ export class RoomEngine {
     })
     peer.on('error', error => {
       if (this.stopped || this.peer !== peer) return
-      if (error.type === 'unavailable-id' && this.state.isHost && this.hostRetries++ < 4) {
+      // Lose the claim on a joined code: someone already hosts it, so join them.
+      if (error.type === 'unavailable-id' && !this.state.isHost) { this.joinAsGuest(); return }
+      if (error.type === 'unavailable-id' && this.hostRetries++ < 4) {
         peer.destroy(); this.openHost(); return
       }
       if (['browser-incompatible', 'invalid-id', 'invalid-key', 'ssl-unavailable', 'unavailable-id'].includes(error.type)) { this.finish('connection'); return }
@@ -98,32 +101,35 @@ export class RoomEngine {
   /** Create a room with a fresh code and become its host. */
   createRoom() {
     this.cleanup(); this.stopped = false; this.hostRetries = 0; this.startAt = Date.now()
-    const selfId = crypto.randomUUID(), name = displayName('')
-    this.set({ ...initialState(), screen: 'room', isHost: true, selfId, name, participants: [{ id: selfId, name, host: true, away: false }] })
+    this.set({ ...initialState(), ...hostState(displayName('')) })
     this.openHost(); this.startTicker()
   }
-  private openHost() {
-    const code = generateCode()
+  private openHost(code = generateCode()) {
     this.set({ code, status: 'connecting' })
     history.replaceState(null, '', `/${code}`)
     const peer = this.createPeer(`${PEER_PREFIX}${code}`)
-    peer.on('open', () => { if (!this.stopped && this.peer === peer) this.set({ status: 'online', error: '' }) })
+    peer.on('open', () => { if (!this.stopped && this.peer === peer) this.set({ ...(!this.state.isHost && hostState(this.state.name)), status: 'online', error: '' }) })
     peer.on('connection', connection => this.handleIncoming(connection))
   }
   /**
-   * Ask the host of the current code to let this tab in.
-   * @param name - The display name to request; it is cleaned before use.
+   * Join the room for the current code, or host it if nobody does yet.
+   *
+   * The tab first claims the code's peer ID; the signalling server grants each ID once, so
+   * simultaneous joiners end up with exactly one host and the rest join it as guests.
+   * @param name - The display name to use; it is cleaned before use.
    */
   requestJoin(name: string) {
     const code = this.state.code
-    this.cleanup(); this.stopped = false; this.accepted = false; this.startAt = Date.now(); this.lastHostSeen = Date.now()
+    this.cleanup(); this.stopped = false; this.startAt = Date.now(); this.lastHostSeen = Date.now()
     this.sessionId = crypto.randomUUID()
     this.set({ ...initialState(), screen: 'waiting', code, name: displayName(name) })
-    history.replaceState(null, '', `/${code}`)
+    this.openHost(code); this.startTicker()
+  }
+  private joinAsGuest() {
+    this.peer?.destroy()
     const peer = this.createPeer(`${PEER_PREFIX}guest-${crypto.randomUUID()}`)
     peer.on('open', () => this.connectHost())
     peer.on('connection', connection => connection.close())
-    this.startTicker()
   }
   private connectHost() {
     if (this.stopped || !this.peer?.open || this.hostConnection?.open) return

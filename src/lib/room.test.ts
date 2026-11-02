@@ -27,7 +27,9 @@ vi.mock('peerjs', () => {
   class FakePeer extends Events {
     open = false; disconnected = false; destroyed = false; connections: Connection[] = []
     constructor(public id: string) {
-      super(); network.peers.set(id, this)
+      super()
+      if (network.peers.has(id)) { setTimeout(() => this.emit('error', { type: 'unavailable-id' }), 0); return }
+      network.peers.set(id, this)
       setTimeout(() => { this.open = true; this.emit('open', id) }, 0)
     }
     connect(id: string) {
@@ -44,7 +46,7 @@ vi.mock('peerjs', () => {
       return connection
     }
     reconnect() { this.disconnected = false; this.open = true; this.emit('open', this.id) }
-    destroy() { this.destroyed = true; this.open = false; this.connections.forEach(connection => connection.close()); network.peers.delete(this.id) }
+    destroy() { this.destroyed = true; this.open = false; this.connections.forEach(connection => connection.close()); if (network.peers.get(this.id) === this) network.peers.delete(this.id) }
   }
   return { default: FakePeer }
 })
@@ -79,6 +81,18 @@ describe('host-star room behavior', () => {
     expect(history.replaceState).toHaveBeenLastCalledWith(null, '', '/HLMV2K')
     guest.home()
     expect(history.replaceState).toHaveBeenLastCalledWith(null, '', '/')
+  })
+  it('hosts an unclaimed code on join, and simultaneous joiners get one host', async () => {
+    const alex = make(); alex.showJoin('HLMV2K'); alex.requestJoin('Alex'); await settle()
+    expect(alex.getSnapshot()).toMatchObject({ screen: 'room', isHost: true, code: 'HLMV2K', name: 'Alex', status: 'online' })
+    const bob = make(); bob.showJoin('HLMV2K'); bob.requestJoin('Bob'); await settle()
+    expect(bob.getSnapshot()).toMatchObject({ screen: 'room', isHost: false })
+    expect(alex.getSnapshot().participants.map(p => p.name)).toEqual(['Alex', 'Bob'])
+    const [cam, dee] = [make(), make()]
+    for (const [engine, name] of [[cam, 'Cam'], [dee, 'Dee']] as const) { engine.showJoin('AB23CD'); engine.requestJoin(name) }
+    await settle()
+    expect([cam, dee].map(e => e.getSnapshot().isHost).sort()).toEqual([false, true])
+    expect([cam, dee].every(e => e.getSnapshot().screen === 'room')).toBe(true)
   })
   it('waits for host approval, then exchanges messages without sharing earlier history', async () => {
     const host = await hostRoom()
