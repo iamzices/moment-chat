@@ -10,20 +10,24 @@ Moment: browser-only, peer-to-peer temporary chat room (React 19 + Vite + PeerJS
 ## Privacy invariants (do not break)
 - No message server. Chat payloads travel only over WebRTC data channels.
 - STUN only, **never add TURN servers**: a TURN server could relay chat traffic.
-- No persistence: Room state, resume tokens, and message buffers live only in `RoomEngine` memory.
+- No persistence: Room state, resume tokens, message buffers, and file blobs live only in `RoomEngine` memory. Revoke every object URL when it is no longer shown.
 - No new network endpoints or third-party scripts without asking.
 
 ## Architecture
-- `src/lib/protocol.ts`: types, limits (`MAX_PARTICIPANTS`, `MAX_MESSAGE_LENGTH`, `RECONNECT_MS`), validators, room-code parsing.
-- `src/lib/room.ts`: `RoomEngine`, the whole room state machine. Star topology: guests connect only to the host, and the host relays messages and roster updates to everyone.
+- `src/lib/protocol.ts`: types, limits (`MAX_PARTICIPANTS`, `MAX_MESSAGE_LENGTH`, `MAX_FILES`, `MAX_FILE_SIZE`, `FILE_CHUNK`, `RECONNECT_MS`), validators, name sanitizers, room-code parsing.
+- `src/lib/room.ts`: `RoomEngine`, the whole room state machine. Star topology: guests connect only to the host, and the host relays messages, renames, file chunks, and roster updates to everyone.
+- Files ride the same JSON data channel: a `message` carries `files` metadata, then base64 `chunk`s follow in order (`FILE_CHUNK` keeps each under PeerJS's 16,300-byte limit). Guests ack a file event only after its bytes arrive, so the host resends unacked files after a reconnect.
 - `src/App.tsx`: all screens. It reads the engine via `useSyncExternalStore(engine.subscribe, engine.getSnapshot)`.
 - `src/components/ui/`: shadcn-style primitives. There is no shadcn CLI config, so edit them by hand.
+- Dialogs: static info (About, Privacy) uses a native `<dialog>` via `showModal()`; interactive ones (people, confirmations) use the Radix `Dialog`.
 - Peer IDs are `PEER_PREFIX + roomCode`. Invite links are `/<CODE>`, which works on Pages only because CI copies `index.html` to `404.html`.
 
 ## Rules
-- Treat every inbound peer message as untrusted: check it with `isRecord` / `validId` / `validText` before using it. Outgoing messages carry `v: 1`; bump the version only for breaking wire changes.
+- Treat every inbound peer message as untrusted: check it with `isRecord` / `validId` / `validText` / `validFiles` before using it. Outgoing messages carry `v: 1`; bump the version only for breaking wire changes.
+- Pass received names through `displayName` / `fileName` (they strip bidi and control characters). Preview a file inline only if `previewKind` allows its MIME type, and store blobs with `safeMime`; never preview SVG, HTML, or anything that can run script.
 - Change limits only through the constants in `protocol.ts`.
-- Protocol or engine changes need a matching case in `room.test.ts` or `protocol.test.ts` (tests sit next to the source).
+- Protocol or engine changes need a matching case in `room.test.ts` or `protocol.test.ts`; UI behaviour goes in `App.test.tsx` (jsdom). Tests sit next to the source.
+- Every export gets a TSDoc comment.
 - Use the `@/` import alias for `src/`. Tailwind v4 is configured in `src/index.css` (`@theme`); there is no tailwind.config.
 - Match the existing dense style. Add no new dependencies without asking.
 
