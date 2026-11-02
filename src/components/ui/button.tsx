@@ -30,6 +30,7 @@ const buttonVariants = cva(
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>
 
+/** Render a button styled by `variant` (default, outline, secondary, ghost) and `size` (default, icon). */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, ...props }, ref) => {
     return (

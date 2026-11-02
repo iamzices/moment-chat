@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode, type RefObject } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Crown, Ellipsis, Pencil, Wifi, WifiOff, X } from 'lucide-react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type DragEvent, type FormEvent, type ReactNode, type RefObject } from 'react'
+import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Crown, Download, Ellipsis, File as FileIcon, Paperclip, Pencil, Wifi, WifiOff, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { RoomEngine } from '@/lib/room'
-import { displayName, inviteUrl, MAX_MESSAGE_LENGTH, MAX_PARTICIPANTS, parseRoomCode, type Outcome, type Participant, type RoomState } from '@/lib/protocol'
+import { displayName, inviteUrl, MAX_FILES, MAX_MESSAGE_LENGTH, MAX_PARTICIPANTS, MAX_FILE_SIZE, parseRoomCode, previewKind, type FileItem, type Outcome, type Participant, type RoomState } from '@/lib/protocol'
 import { cn } from '@/lib/utils'
 
 const outcomes: Record<Outcome, string> = {
@@ -22,7 +22,7 @@ const outcomes: Record<Outcome, string> = {
   left: 'You left the room.',
 }
 
-// Decorative chat bubbles that slowly rise behind the landing page: [left %, width, height, seconds, start progress, own message].
+// Define landing bubbles as [left %, width, height, seconds, start progress, own message].
 const bubbles: [number, number, number, number, number, boolean?][] = [
   [6, 220, 64, 64, .1], [18, 150, 50, 74, .55, true], [34, 190, 58, 58, .8], [52, 130, 46, 80, .3, true],
   [66, 240, 68, 68, .65], [80, 160, 52, 62, .05, true], [90, 200, 60, 76, .45],
@@ -49,6 +49,43 @@ function CopyButton({ value, onFailure, onSuccess }: { value: string; onFailure:
   </Button>
 }
 
+function formatSize(bytes: number) {
+  const [value, unit] = bytes >= 1024 ** 2 ? [bytes / 1024 ** 2, 'megabyte'] : bytes >= 1024 ? [bytes / 1024, 'kilobyte'] : [bytes, 'byte']
+  return new Intl.NumberFormat(undefined, { style: 'unit', unit, maximumFractionDigits: 1 }).format(value)
+}
+function useBlobUrl(blob?: Blob) {
+  const [url, setUrl] = useState<string>()
+  useEffect(() => {
+    if (!blob) return
+    const next = URL.createObjectURL(blob); setUrl(next)
+    return () => { URL.revokeObjectURL(next); setUrl(undefined) }
+  }, [blob])
+  return url
+}
+function Attachment({ file, own }: { file: FileItem; own: boolean }) {
+  const url = useBlobUrl(file.blob), kind = previewKind(file.mime), done = file.progress >= file.size
+  const status = file.failed ? (own ? 'Couldn’t send this file.' : 'Couldn’t receive this file.') : done ? formatSize(file.size) : `${formatSize(file.progress)} of ${formatSize(file.size)}`
+  return <div className="attachment">
+    {url && kind === 'image' && <a href={url} target="_blank" rel="noreferrer"><img className="attachment-preview" src={url} alt={file.name} /></a>}
+    {url && kind === 'video' && <video className="attachment-preview" src={url} controls preload="metadata" />}
+    {url && kind === 'audio' && <audio src={url} controls preload="metadata" />}
+    <div className="attachment-card">
+      <FileIcon aria-hidden="true" />
+      <div className="attachment-info"><span className="file-name">{file.name}</span><span className={cn('file-size', file.failed && 'file-failed')}>{status}</span></div>
+      {url && done && <a className="icon-action download-action" href={url} download={file.name} aria-label={`Download ${file.name}`}><Download aria-hidden="true" /></a>}
+    </div>
+    {!done && !file.failed && <progress value={file.progress} max={file.size} aria-label={`${own ? 'Sending' : 'Receiving'} ${file.name}`} />}
+  </div>
+}
+function TrayItem({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const url = useBlobUrl(previewKind(file.type) === 'image' ? file : undefined)
+  return <li className="tray-item">
+    {url ? <img src={url} alt="" /> : <FileIcon aria-hidden="true" />}
+    <div className="attachment-info"><span className="file-name">{file.name}</span><span className="file-size">{formatSize(file.size)}</span></div>
+    <Button type="button" variant="ghost" size="icon" className="icon-action" onClick={onRemove} aria-label={`Remove ${file.name}`}><X aria-hidden="true" /></Button>
+  </li>
+}
+
 function subscribeToLayout(listener: () => void) {
   const query = window.matchMedia('(max-width: 760px)')
   query.addEventListener('change', listener)
@@ -56,7 +93,7 @@ function subscribeToLayout(listener: () => void) {
 }
 const isMobileLayout = () => window.matchMedia('(max-width: 760px)').matches
 
-// Native <dialog>: its content stays in the page while closed (so search engines index it), and the browser handles focus, Escape, and the top layer.
+// Use native <dialog> so closed content stays indexable and the browser handles focus and Escape.
 function InfoDialog({ dialogRef, title, children }: { dialogRef: RefObject<HTMLDialogElement | null>; title: string; children: ReactNode }) {
   const id = useId()
   return <dialog ref={dialogRef} className="info-dialog" aria-labelledby={id} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close() }}>
@@ -68,11 +105,9 @@ function InfoDialog({ dialogRef, title, children }: { dialogRef: RefObject<HTMLD
 function PrivacyDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
   return <InfoDialog dialogRef={dialogRef} title="Privacy">
     {([
-      ['Data Collected', 'Moment does not collect any personal data. There are no accounts, cookies, tracking, or analytics.'],
-      ['Messages', 'Messages are encrypted and never pass through a server. They exist only in browser memory and are deleted when a participant leaves or the room ends.'],
-      ['Third Parties', 'The PeerJS signaling service sees room codes and IP addresses. Connection servers run by Google and Twilio see IP addresses. GitHub Pages and Cloudflare, which host the website, may log page requests, including invite links.'],
-      ['Contact', <>Questions can be sent to <a href="mailto:hello@zices.com">hello@zices.com</a>.</>],
-    ] as [string, ReactNode][]).map(([title, text]) => <div className="privacy-item about-item" key={title}><div><h3>{title}</h3><p>{text}</p></div></div>)}
+      ['', 'Moment does not collect any user data. Messages and files are transmitted only between participants’ browsers over encrypted connections, are not sent to Moment, and are deleted when the room ends.'],
+      ['Third Parties', 'Moment relies on third-party services that may process IP addresses but never message contents. PeerJS operates the signaling service that connects participants and also processes room codes. Google and Twilio operate connection servers that allow browsers to connect across networks. GitHub Pages and Cloudflare host the website and may log page requests, including invite links.'],
+    ] as [string, ReactNode][]).map(([title, text], index) => <div className="privacy-item about-item" key={index}><div>{title && <h3>{title}</h3>}<p>{text}</p></div></div>)}
   </InfoDialog>
 }
 
@@ -86,6 +121,10 @@ function AboutDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | n
   </InfoDialog>
 }
 
+/**
+ * Render Moment: the landing, join, waiting and outcome screens, or the room once joined.
+ * @returns The app shell, with one `RoomEngine` for the tab's lifetime.
+ */
 export default function App() {
   const [engine] = useState(() => new RoomEngine())
   const state = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
@@ -166,6 +205,10 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
   const [endOpen, setEndOpen] = useState(false)
   const [removePerson, setRemovePerson] = useState<Participant | null>(null)
   const [draft, setDraft] = useState('')
+  const [attachments, setAttachments] = useState<File[]>([])
+  const [attachError, setAttachError] = useState('')
+  const [dragging, setDragging] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
   const [scrolledUp, setScrolledUp] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -174,14 +217,14 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
   const [connected, setConnected] = useState(false)
   const link = inviteUrl(state.code)
   useEffect(() => {
-    // Briefly confirm the connection instead of letting the "Connecting" banner just vanish.
+    // Flash "Connected" briefly instead of letting the banner vanish.
     const was = lastStatus.current; lastStatus.current = state.status
     if (state.status !== 'online' || was === 'online') return
     setConnected(true)
     const timer = setTimeout(() => setConnected(false), 3000)
     return () => { clearTimeout(timer); setConnected(false) }
   }, [state.status])
-  // Focus the message box on entry, except on touch screens where it would pop up the keyboard over the room.
+  // Skip autofocus on touch screens, where it would open the keyboard over the room.
   useEffect(() => { if (window.matchMedia?.('(pointer: fine)').matches) textareaRef.current?.focus() }, [])
   useEffect(() => {
     if (!scrolledUp || state.messages.at(-1)?.senderId === state.selfId) messageEnd.current?.scrollIntoView({ block: 'end' })
@@ -192,8 +235,15 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
   }, [draft])
   function send(event?: FormEvent) {
     event?.preventDefault()
-    if (engine.sendMessage(draft.trim())) { setDraft(''); setScrolledUp(false); textareaRef.current?.focus() }
+    if (engine.sendMessage(draft.trim(), attachments)) { setDraft(''); setAttachments([]); setAttachError(''); setScrolledUp(false); textareaRef.current?.focus() }
   }
+  function addFiles(list: FileList) {
+    const added = [...list].filter(file => file.size > 0), fitting = added.filter(file => file.size <= MAX_FILE_SIZE)
+    setAttachError(fitting.length < added.length || attachments.length + fitting.length > MAX_FILES ? 'Attach up to 10 files, each up to 100 MB.' : '')
+    setAttachments(current => [...current, ...fitting].slice(0, MAX_FILES))
+    textareaRef.current?.focus()
+  }
+  const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files')
   const mobileLayout = useSyncExternalStore(subscribeToLayout, isMobileLayout)
   const identity = <div className="room-identity" role="group" aria-label="Room code"><strong>{state.code}</strong><CopyButton value={link} onFailure={() => setManualCopy(true)} onSuccess={() => setManualCopy(false)} /></div>
   const menu = <RoomMenu state={state} engine={engine} onLeave={() => { if (state.isHost) setEndOpen(true); else engine.leave() }} />
@@ -207,7 +257,8 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
         People<span>{state.requests.length > 0 ? `${state.requests.length} waiting` : `${state.participants.length} / ${MAX_PARTICIPANTS}`}</span>
       </Button>
     </div>}
-    <main className="chat-main">{manualCopy && <div className="manual-copy"><Input aria-label="Invite link" readOnly value={link} onFocus={event => event.target.select()} /><p role="alert">Couldn’t copy the link. Select it and copy it manually.</p></div>}<h1 className="sr-only">Room {state.code}</h1>
+    <main className="chat-main" onDragOver={event => { if (hasFiles(event)) { event.preventDefault(); setDragging(true) } }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false) }} onDrop={event => { if (hasFiles(event)) { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files) } }}>
+      {dragging && <div className="drop-target" aria-hidden="true">Drop to Attach</div>}{manualCopy && <div className="manual-copy"><Input aria-label="Invite link" readOnly value={link} onFocus={event => event.target.select()} /><p role="alert">Couldn’t copy the link. Select it and copy it manually.</p></div>}<h1 className="sr-only">Room {state.code}</h1>
       {(state.status !== 'online' || connected) && <div className="connection-banner" role="status">{state.status === 'online' ? <Wifi aria-hidden="true" /> : <WifiOff aria-hidden="true" />}<span>{state.status === 'online' ? 'Connected to the room.' : state.status === 'connecting' ? 'Connecting to the room…' : state.isHost ? 'Reconnecting. New people may be unable to join.' : 'Reconnecting for up to 2 minutes. Your messages will wait.'}</span></div>}
       <div className="message-scroll" ref={scrollRef} role="log" aria-label="Room messages" aria-live="polite" aria-relevant="additions" onScroll={() => { const el = scrollRef.current; if (el) setScrolledUp(el.scrollHeight - el.scrollTop - el.clientHeight > 100) }}>
         <div className="message-list">
@@ -217,12 +268,16 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
             const previous = state.messages[index - 1]
             const grouped = previous && !previous.system && previous.senderId === message.senderId && message.time - previous.time < 60_000
             return <div key={message.id} className={cn('message-row', own && 'own-message', grouped && 'grouped-message')}>
-              <div className="message-content">{!grouped && <div className="message-meta">{!own && <span className="person-name">{message.name}</span>}<time dateTime={new Date(message.time).toISOString()}>{new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>}<div className={cn('message-bubble', message.pending && 'pending-message')}>{message.text}</div>{message.pending && state.status === 'online' && <span className="pending-caption">Sending…</span>}</div>
+              <div className="message-content">{!grouped && <div className="message-meta">{!own && <span className="person-name">{message.name}</span>}<time dateTime={new Date(message.time).toISOString()}>{new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>}{message.text && <div className={cn('message-bubble', message.pending && 'pending-message')}>{message.text}</div>}{message.files?.map((file, f) => <Attachment key={f} file={file} own={own} />)}{message.pending && state.status === 'online' && <span className="pending-caption">Sending…</span>}</div>
             </div>
           })}
         </div><div ref={messageEnd} />
       </div>
-      <div className="composer-area">{scrolledUp && <Button className="latest-button" variant="secondary" onClick={() => { setScrolledUp(false); messageEnd.current?.scrollIntoView({ block: 'end' }) }}><ArrowDown aria-hidden="true" />Latest Messages</Button>}{state.error && state.status === 'online' && <p className="composer-error" role="status">{state.error}</p>}<form className="composer" onSubmit={send}><Label htmlFor="message" className="sr-only">Message</Label><Textarea id="message" ref={textareaRef} placeholder="Message" value={draft} maxLength={MAX_MESSAGE_LENGTH} rows={1} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && matchMedia('(pointer: fine)').matches) { event.preventDefault(); send() } }} /><Button size="icon" type="submit" className="send-button" disabled={!draft.trim()} aria-label="Send message"><ArrowRight aria-hidden="true" /></Button></form>{draft.length >= 3800 && <div className="composer-footer"><span className="message-counter near-limit">{draft.length.toLocaleString()} / 4,000</span></div>}</div>
+      <div className="composer-area">{scrolledUp && <Button className="latest-button" variant="secondary" onClick={() => { setScrolledUp(false); messageEnd.current?.scrollIntoView({ block: 'end' }) }}><ArrowDown aria-hidden="true" />Latest Messages</Button>}{(attachError || (state.error && state.status === 'online')) && <p className="composer-error" role="status">{attachError || state.error}</p>}<form className="composer" onSubmit={send}>
+        {attachments.length > 0 && <ul className="attachment-tray" aria-label="Attachments">{attachments.map((file, f) => <TrayItem key={f} file={file} onRemove={() => { setAttachments(attachments.filter((_, k) => k !== f)); setAttachError('') }} />)}</ul>}
+        <input ref={fileInput} type="file" multiple hidden onChange={event => { if (event.target.files) addFiles(event.target.files); event.target.value = '' }} />
+        <Button type="button" variant="ghost" size="icon" className="attach-button" onClick={() => fileInput.current?.click()} aria-label="Attach Files"><Paperclip aria-hidden="true" /></Button>
+        <Label htmlFor="message" className="sr-only">Message</Label><Textarea id="message" ref={textareaRef} placeholder="Message" value={draft} maxLength={MAX_MESSAGE_LENGTH} rows={1} onChange={event => setDraft(event.target.value)} onPaste={event => { const { files, types } = event.clipboardData; if (files.length && !types.includes('text/plain')) { event.preventDefault(); addFiles(files) } }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && matchMedia('(pointer: fine)').matches) { event.preventDefault(); send() } }} /><Button size="icon" type="submit" className="send-button" disabled={!draft.trim() && !attachments.length} aria-label="Send message"><ArrowRight aria-hidden="true" /></Button></form>{draft.length >= 3800 && <div className="composer-footer"><span className="message-counter near-limit">{draft.length.toLocaleString()} / 4,000</span></div>}</div>
     </main></div>{!mobileLayout && <aside className="desktop-sidebar">{controls}</aside>}</div>
     {mobileLayout && <Dialog open={peopleOpen} onOpenChange={setPeopleOpen}><DialogContent className="moment-dialog people-dialog" onEscapeKeyDown={event => { if (document.activeElement?.hasAttribute('data-rename')) event.preventDefault() }}><DialogHeader className="sr-only"><DialogTitle>Participants</DialogTitle><DialogDescription>View participants and manage requests to join.</DialogDescription></DialogHeader>{controls}</DialogContent></Dialog>}
     <Dialog open={endOpen} onOpenChange={setEndOpen}><DialogContent className="moment-dialog confirm-dialog"><DialogHeader><DialogTitle>End Room?</DialogTitle><DialogDescription>Everyone will be disconnected and the chat cleared.</DialogDescription></DialogHeader><div className="confirm-actions"><Button variant="outline" onClick={() => setEndOpen(false)}>Cancel</Button><Button onClick={() => { setEndOpen(false); engine.leave() }}>End Room</Button></div></DialogContent></Dialog>
@@ -236,7 +291,7 @@ function PeoplePanel({ state, engine, identity, onRemove }: { state: RoomState; 
     <section className="panel-section">
       <div className="sidebar-heading"><h2>People</h2><span>{`${state.participants.length} / ${MAX_PARTICIPANTS}`}</span></div>
       {state.participants.map(person => person.id === state.selfId && renaming
-        // Enter or clicking away saves; Escape restores the old name first, so the blur save is a no-op.
+        // Restore the old name on Escape so the blur save becomes a no-op.
         ? <div className="participant rename-row" key={person.id}>
           <Input aria-label="Your name" data-rename autoFocus maxLength={32} autoComplete="off" enterKeyHint="done" defaultValue={state.name} onFocus={event => event.target.select()}
             onBlur={event => { engine.rename(event.currentTarget.value); setRenaming(false) }}
@@ -264,7 +319,6 @@ function PeoplePanel({ state, engine, identity, onRemove }: { state: RoomState; 
   </div>
 }
 
-// Room settings live behind a ⋯ button, using the native popover (light dismiss and Escape for free).
 function RoomMenu({ state, engine, onLeave }: { state: RoomState; engine: RoomEngine; onLeave: () => void }) {
   const id = useId()
   const menu = useRef<HTMLDivElement>(null)

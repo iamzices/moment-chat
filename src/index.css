@@ -11,7 +11,7 @@
   --font-mono: 'DM Mono', monospace;
 }
 :root {
-  /* Palette: see "Design language" in AGENTS.md. Use these tokens, never raw colours. */
+  /* Use only these tokens, never raw colours (see "Design language" in AGENTS.md). */
   --background: #0f0f10; --card: #1e1e22; --secondary: #2c2c31; --accent: #36363c;
   --border: #787881; --muted-foreground: #b4b4bd; --foreground: #fafafa;
   --primary: #8fd0ff; --danger: #ff7b7b;
@@ -100,11 +100,35 @@ svg { flex-shrink: 0; }
 .pending-message { opacity: .65; }
 .pending-caption { display: block; text-align: right; margin-top: 4px; font-size: 11px; color: var(--muted-foreground); }
 .composer-area { position: relative; padding: 16px 6% 24px; }
-.composer { display: flex; align-items: flex-end; max-width: 850px; margin: 0 auto; padding: 6px; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+.composer { display: flex; flex-wrap: wrap; align-items: flex-end; max-width: 850px; margin: 0 auto; padding: 6px; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
 .composer:focus-within { border-color: var(--primary); }
 .composer textarea { min-height: 44px; max-height: 160px; height: 44px; padding: 11px 10px; resize: none; background: transparent; border: 0; box-shadow: none; font-size: 16px; line-height: 22px; }
 .composer textarea:focus-visible { outline: none; box-shadow: none; }
 .composer textarea::placeholder { color: var(--muted-foreground); }
+.composer textarea { flex: 1 1 0; min-width: 0; }
+.attach-button { width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; color: var(--muted-foreground); }
+.attach-button:hover { color: var(--foreground); }
+.attachment-tray { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tray-item { display: flex; align-items: center; gap: 10px; max-width: min(260px, 100%); padding-left: 10px; background: var(--secondary); border-radius: 8px; }
+.tray-item img { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; }
+.tray-item > svg, .attachment-card > svg { width: 18px; height: 18px; color: var(--muted-foreground); }
+.attachment-info { display: flex; flex-direction: column; flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; }
+.file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-size { font-size: 11px; color: var(--muted-foreground); }
+.file-failed { color: var(--danger); }
+.attachment { display: flex; flex-direction: column; gap: 8px; min-width: min(240px, 100%); margin-top: 6px; padding: 10px 12px; background: var(--card); border-radius: 12px; }
+.own-message .attachment { background: var(--secondary); }
+.attachment-preview { display: block; max-width: 100%; max-height: 320px; border-radius: 8px; }
+.attachment audio { width: 100%; }
+.attachment-card { display: flex; align-items: center; gap: 10px; }
+.download-action { display: inline-flex; align-items: center; justify-content: center; margin-right: -12px; border-radius: 6px; }
+.download-action:hover { background: var(--accent); }
+.attachment progress { width: 100%; height: 4px; appearance: none; border: 0; border-radius: 2px; overflow: hidden; background: var(--secondary); }
+.attachment progress::-webkit-progress-bar { background: var(--secondary); }
+.attachment progress::-webkit-progress-value { background: var(--primary); }
+.attachment progress::-moz-progress-bar { background: var(--primary); }
+.own-message .attachment progress, .own-message .attachment progress::-webkit-progress-bar { background: var(--accent); }
+.drop-target { position: absolute; inset: 12px; z-index: 5; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--primary); border-radius: 12px; background: color-mix(in srgb, var(--background) 88%, transparent); font-size: 15px; pointer-events: none; }
 .send-button { width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; }
 .send-button:disabled { background: var(--secondary); color: var(--muted-foreground); opacity: 1; }
 .composer-footer { max-width: 850px; margin: 8px auto 0; text-align: right; font-size: 11px; color: var(--primary); }
@@ -122,7 +146,6 @@ svg { flex-shrink: 0; }
 .participant { display: flex; align-items: center; gap: 4px; min-height: 44px; }
 .participant-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .participant-name em { font-family: var(--font-sans); font-size: 12px; font-style: normal; color: var(--muted-foreground); }
-/* Names are always monospace. */
 .participant-name, .person-name, .rename-row input { font-family: var(--font-mono); }
 .participant > small { font-size: 12px; color: var(--muted-foreground); }
 .host-mark { width: 15px; height: 15px; margin-right: 4px; color: var(--primary); }

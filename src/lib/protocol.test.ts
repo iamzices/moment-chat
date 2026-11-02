@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { displayName, generateCode, inviteUrl, MAX_MESSAGE_LENGTH, parseRoomCode, validText } from './protocol'
+import { displayName, fileName, generateCode, inviteUrl, MAX_FILE_SIZE, MAX_MESSAGE_LENGTH, parseRoomCode, previewKind, validFiles, validText } from './protocol'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -38,5 +38,20 @@ describe('room input boundaries', () => {
     expect(validText('a'.repeat(MAX_MESSAGE_LENGTH + 1))).toBe(false)
     expect(validText('   ')).toBe(false)
     expect(validText({ text: 'spoof' })).toBe(false)
+  })
+  it('bounds incoming file lists, cleans file names, and previews only safe types', () => {
+    const file = { name: 'a.png', mime: 'image/png', size: 10 }
+    expect(validFiles([file])).toBe(true)
+    expect(validFiles([])).toBe(false)
+    expect(validFiles(Array(11).fill(file))).toBe(false)
+    expect(validFiles([{ ...file, size: MAX_FILE_SIZE }, { ...file, size: MAX_FILE_SIZE }])).toBe(true)
+    expect(validFiles([{ ...file, size: MAX_FILE_SIZE + 1 }])).toBe(false)
+    expect(validFiles([{ ...file, size: 0 }])).toBe(false)
+    expect(validFiles([{ ...file, name: 7 }])).toBe(false)
+    expect(fileName('\u202egpj.exe')).toBe('gpj.exe')
+    expect(fileName('../../etc\\passwd')).toBe('.._.._etc_passwd')
+    expect(previewKind('image/png')).toBe('image')
+    expect(previewKind('image/svg+xml')).toBeNull()
+    expect(previewKind('text/html')).toBeNull()
   })
 })

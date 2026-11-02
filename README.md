@@ -13,6 +13,7 @@
 - No sign-up or accounts
 - Ephemeral, peer-to-peer messaging
 - Chat rooms for up to 8 people
+- File sharing
 
 ## Run locally
 

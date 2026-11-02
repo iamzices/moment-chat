@@ -13,6 +13,7 @@ vi.mock('peerjs', () => {
     constructor(public peer: string, public owner: string) { super() }
     send(data: unknown) {
       if (!this.open || network.blocked.has(this.owner) || network.blocked.has(this.peer)) return
+      if (new TextEncoder().encode(JSON.stringify(data)).byteLength >= 16300) throw new Error('Message too big for JSON channel')
       const serialized = JSON.parse(JSON.stringify(data))
       if (network.dropAcks && serialized.type === 'ack') return
       setTimeout(() => { if (this.other?.open) this.other.emit('data', serialized) }, 0)
@@ -52,6 +53,9 @@ import { RoomEngine } from './room'
 const engines: RoomEngine[] = []
 const make = () => { const engine = new RoomEngine(); engines.push(engine); return engine }
 const settle = () => vi.advanceTimersByTimeAsync(30)
+// Advance many rounds, since file reads resolve outside fake timers.
+async function flush() { for (let round = 0; round < 60; round++) { await vi.advanceTimersByTimeAsync(30); await new Promise(resolve => process.nextTick(resolve)) } }
+const binary = (size: number) => new File([Uint8Array.from({ length: size }, (_, i) => i % 251)], 'data.bin', { type: 'application/octet-stream' })
 async function hostRoom(manual = true) { const host = make(); host.createRoom(); if (manual) host.setAutoApprove(false); await settle(); return host }
 async function request(host: RoomEngine, name = 'Alex') {
   const guest = make(); guest.showJoin(host.getSnapshot().code); guest.requestJoin(name); await settle(); return guest
@@ -205,6 +209,49 @@ describe('host-star room behavior', () => {
     const message = host.getSnapshot().messages.find(m => m.text === 'forged sender')!
     expect(message.name).toBe('Alex')
     expect(message.senderId).toBe(alex.getSnapshot().selfId)
+  })
+  it('sends files with a message: every other device gets the text once and complete, safely typed files', async () => {
+    const host = await hostRoom(false), alex = await join(host), bob = await join(host, 'Bob')
+    const big = binary(100_000), note = new File(['hello'], 'note.txt', { type: 'text/plain' })
+    expect(alex.sendMessage('two files', [big, note])).toBe(true)
+    await flush()
+    for (const engine of [host, bob]) {
+      const sent = engine.getSnapshot().messages.filter(m => m.text === 'two files')
+      expect(sent).toHaveLength(1)
+      const [first, second] = sent[0].files!
+      expect(new Uint8Array(await first.blob!.arrayBuffer())).toEqual(new Uint8Array(await big.arrayBuffer()))
+      expect(await second.blob!.text()).toBe('hello')
+      expect(second.blob!.type).toBe('application/octet-stream')
+    }
+    expect(alex.getSnapshot().messages.at(-1)?.files?.every(file => file.progress === file.size && !file.failed)).toBe(true)
+    expect(host.sendMessage('', [note])).toBe(true); await flush()
+    expect(await alex.getSnapshot().messages.at(-1)?.files?.[0].blob?.text()).toBe('hello')
+    expect(alex.sendMessage('', [])).toBe(false)
+  })
+  it('ignores chunks from someone else and aborts a stream that overflows its declared size', async () => {
+    const host = await hostRoom(false), alex = await join(host), bob = await join(host, 'Bob')
+    const [alexPeer, bobPeer] = [...network.peers.values()].filter(peer => peer.id.includes('guest-'))
+    alexPeer.connections[0].send({ v: 1, type: 'message', text: 'forged file', clientId: 'upload-1', files: [{ name: 'a.bin', mime: '', size: 4 }] })
+    await settle()
+    bobPeer.connections[0].send({ v: 1, type: 'chunk', id: 'upload-1', f: 0, i: 0, data: btoa('abcd') })
+    await settle()
+    expect(host.getSnapshot().messages.find(m => m.text === 'forged file')?.files?.[0].progress).toBe(0)
+    alexPeer.connections[0].send({ v: 1, type: 'chunk', id: 'upload-1', f: 0, i: 0, data: btoa('abcdef') })
+    await settle()
+    for (const engine of [host, bob]) expect(engine.getSnapshot().messages.find(m => m.text === 'forged file')?.files?.[0].failed).toBe(true)
+    expect(alex.getSnapshot().screen).toBe('room')
+  })
+  it('resends a shared file to someone who dropped before it arrived', async () => {
+    const host = await hostRoom(), alex = await join(host)
+    const guestPeer = [...network.peers.values()].find(peer => peer.id.includes('guest-'))
+    network.blocked.add(guestPeer.id); guestPeer.connections.forEach((connection: any) => connection.close())
+    host.sendMessage('while away', [binary(70_000)])
+    await vi.advanceTimersByTimeAsync(10_000)
+    network.blocked.delete(guestPeer.id)
+    await vi.advanceTimersByTimeAsync(6000); await flush()
+    const received = alex.getSnapshot().messages.filter(m => m.text === 'while away')
+    expect(received).toHaveLength(1)
+    expect(received[0].files?.[0].blob?.size).toBe(70_000)
   })
   it('does not allow an unadmitted connection to send messages', async () => {
     const host = await hostRoom(); await request(host)

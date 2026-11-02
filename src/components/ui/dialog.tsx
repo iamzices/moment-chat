@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
+/** Wrap a modal dialog and control whether it is open. */
 const Dialog = DialogPrimitive.Root
 
 const DialogPortal = DialogPrimitive.Portal
@@ -23,6 +24,7 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+/** Render the dialog panel, centered over a backdrop, with a close button. */
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
@@ -47,6 +49,7 @@ const DialogContent = React.forwardRef<
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+/** Group a dialog's title and description. */
 const DialogHeader = ({
   className,
   ...props
@@ -61,6 +64,7 @@ const DialogHeader = ({
 )
 DialogHeader.displayName = 'DialogHeader'
 
+/** Render the dialog's accessible title. */
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
@@ -76,6 +80,7 @@ const DialogTitle = React.forwardRef<
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
+/** Render the dialog's accessible description. */
 const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
