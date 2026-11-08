@@ -6,23 +6,20 @@ afterEach(() => vi.unstubAllGlobals())
 describe('room input boundaries', () => {
   it('accepts codes, pasted invites, and query links, but rejects unrelated URLs', () => {
     expect(parseRoomCode(' ab23cd ')).toBe('AB23CD')
-    expect(parseRoomCode('https://chat.zices.com/HLMV2K')).toBe('HLMV2K')
-    expect(parseRoomCode('https://chat.zices.com/hlmv2k/')).toBe('HLMV2K')
-    expect(parseRoomCode('https://chat.zices.com/AB23CD?ref=invite')).toBe('AB23CD')
-    expect(parseRoomCode('https://example.com/#room=AB23CD')).toBe('AB23CD')
-    expect(parseRoomCode('https://example.com/?room=ab23cd')).toBe('AB23CD')
+    expect(parseRoomCode('https://chat.zices.com/?room=hlmv2k')).toBe('HLMV2K')
+    expect(parseRoomCode('https://chat.zices.com/?ref=invite&room=AB23CD')).toBe('AB23CD')
     expect(parseRoomCode('https://example.com/')).toBeNull()
-    expect(parseRoomCode('javascript://example.com/#room=AB23CD')).toBeNull()
+    expect(parseRoomCode('https://chat.zices.com/HLMV2K')).toBeNull()
+    expect(parseRoomCode('javascript://example.com/?room=AB23CD')).toBeNull()
     expect(parseRoomCode('ABCDEF7')).toBeNull()
     expect(parseRoomCode('AB CD1')).toBeNull()
-    expect(parseRoomCode('https://chat.zices.com/AB23CD7')).toBeNull()
-    expect(parseRoomCode('https://chat.zices.com/assets/file.js')).toBeNull()
+    expect(parseRoomCode('https://chat.zices.com/?room=AB23CD7')).toBeNull()
   })
-  it('copies an absolute path invite with no hash or query', () => {
-    vi.stubGlobal('window', { location: { href: 'https://chat.zices.com/?ref=old#room=OLD123' } })
-    expect(inviteUrl('HLMV2K')).toBe('https://chat.zices.com/HLMV2K')
-    vi.stubGlobal('window', { location: { href: 'http://127.0.0.1:5173/ABC234' } })
-    expect(inviteUrl('HLMV2K')).toBe('http://127.0.0.1:5173/HLMV2K')
+  it('copies an absolute query invite on the current origin', () => {
+    vi.stubGlobal('window', { location: { origin: 'https://chat.zices.com' } })
+    expect(inviteUrl('HLMV2K')).toBe('https://chat.zices.com/?room=HLMV2K')
+    vi.stubGlobal('window', { location: { origin: 'http://127.0.0.1:5173' } })
+    expect(inviteUrl('HLMV2K')).toBe('http://127.0.0.1:5173/?room=HLMV2K')
   })
   it('generates six-character room codes and anonymous four-digit names', () => {
     for (let i = 0; i < 100; i++) {

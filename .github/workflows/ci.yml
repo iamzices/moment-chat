@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
-      - run: npm ci && npm test && npm run build && cp dist/index.html dist/404.html
+      - run: npm ci && npm test && npm run build
       - uses: actions/upload-pages-artifact@v4
         if: github.event_name == 'push'
         with: { path: dist }

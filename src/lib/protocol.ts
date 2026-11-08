@@ -37,7 +37,7 @@ export interface RoomState {
 }
 /**
  * Extract a room code from a typed code or a pasted invite link.
- * @param input - A 6-character code, or an http(s) URL carrying the code in its path, `#room=` or `?room=`.
+ * @param input - A 6-character code, or an http(s) invite URL carrying it in `?room=`.
  * @returns The uppercase code, or null if none is found.
  */
 export function parseRoomCode(input: string): string | null {
@@ -46,9 +46,7 @@ export function parseRoomCode(input: string): string | null {
     try {
       const url = new URL(candidate)
       if (!['http:', 'https:'].includes(url.protocol)) return null
-      candidate = /^\/([A-Z0-9]{6})\/?$/i.exec(url.pathname)?.[1]
-        ?? new URLSearchParams(url.hash.replace(/^#/, '')).get('room')
-        ?? url.searchParams.get('room') ?? ''
+      candidate = url.searchParams.get('room') ?? ''
     } catch { return null }
   }
   candidate = candidate.toUpperCase()
@@ -62,8 +60,7 @@ export function generateCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(6))
   return Array.from(bytes, byte => CODE_ALPHABET[byte % CODE_ALPHABET.length]).join('')
 }
-// Strip control and bidi characters, which can disguise "gpj.exe" as "exe.jpg".
-const unsafe = /[\u0000-\u001f\u007f​-‏‪-‮⁦-⁩]/g
+const unsafe = /[\p{Cc}\p{Cf}]/gu
 /**
  * Clean a display name, falling back to a random anonymous one.
  * @param name - The untrusted name as typed or received.
@@ -126,10 +123,8 @@ export function validId(value: unknown): value is string { return typeof value =
 /**
  * Build the shareable invite link for a room on the current origin.
  * @param code - The room code.
- * @returns An absolute URL of the form `<origin>/<code>`, with no query or hash.
+ * @returns An absolute URL of the form `<origin>/?room=<code>`.
  */
 export function inviteUrl(code: string): string {
-  const url = new URL(window.location.href)
-  url.pathname = `/${code}`; url.search = ''; url.hash = ''
-  return url.href
+  return `${window.location.origin}/?room=${code}`
 }

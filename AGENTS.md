@@ -20,8 +20,8 @@ Moment: browser-only, peer-to-peer temporary chat room (React 19 + Vite + PeerJS
 - `src/App.tsx`: all screens. It reads the engine via `useSyncExternalStore(engine.subscribe, engine.getSnapshot)`.
 - `src/components/ui/`: shadcn-style primitives. There is no shadcn CLI config, so edit them by hand.
 - Dialogs: static info (About, Privacy) uses a native `<dialog>` via `showModal()`; interactive ones (people, confirmations) use the Radix `Dialog`.
-- Peer IDs are `PEER_PREFIX + roomCode`. Invite links are `/<CODE>`, which works on Pages only because CI copies `index.html` to `404.html`.
-- Joining claims the code's peer ID first: if nobody hosts it, the joiner becomes host; otherwise PeerJS returns `unavailable-id` and the tab joins as a guest. So any code (e.g. from a bot) works as a link before the room exists, and simultaneous joiners get exactly one host.
+- Peer IDs are `PEER_PREFIX + roomCode`. Invite links are `/?room=<CODE>`, so Pages always serves `index.html` with a 200 (Pages has no SPA fallback).
+- Joining claims the code's peer ID first: if nobody hosts it, the joiner becomes host; otherwise PeerJS returns `unavailable-id` and the tab joins as a guest. So any code works as a link before the room exists, and simultaneous joiners get exactly one host.
 
 ## Rules
 - Treat every inbound peer message as untrusted: check it with `isRecord` / `validId` / `validText` / `validFiles` before using it. Outgoing messages carry `v: 1`; bump the version only for breaking wire changes.

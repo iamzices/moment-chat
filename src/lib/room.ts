@@ -95,7 +95,7 @@ export class RoomEngine {
    * Show the join screen for a room and put its code in the address bar.
    * @param code - The room code to join.
    */
-  showJoin(code: string) { this.set({ screen: 'join', code, error: '' }); history.replaceState(null, '', `/${code}`) }
+  showJoin(code: string) { this.set({ screen: 'join', code, error: '' }); history.replaceState(null, '', `/?room=${code}`) }
   /** Leave any room or request and return to the landing screen. */
   home() { this.cleanup(); this.stopped = false; this.sessionId = crypto.randomUUID(); this.set(initialState()); history.replaceState(null, '', '/') }
   /** Create a room with a fresh code and become its host. */
@@ -106,7 +106,7 @@ export class RoomEngine {
   }
   private openHost(code = generateCode()) {
     this.set({ code, status: 'connecting' })
-    history.replaceState(null, '', `/${code}`)
+    history.replaceState(null, '', `/?room=${code}`)
     const peer = this.createPeer(`${PEER_PREFIX}${code}`)
     peer.on('open', () => { if (!this.stopped && this.peer === peer) this.set({ ...(!this.state.isHost && hostState(this.state.name)), status: 'online', error: '' }) })
     peer.on('connection', connection => this.handleIncoming(connection))

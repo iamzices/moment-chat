@@ -74,11 +74,11 @@ beforeEach(() => {
 afterEach(() => { engines.forEach(engine => engine.cleanup()); engines.length = 0; vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('host-star room behavior', () => {
-  it('uses clean room paths and returns home to the root path', async () => {
+  it('puts the room in the query and returns home to the root path', async () => {
     const host = await hostRoom()
-    expect(history.replaceState).toHaveBeenLastCalledWith(null, '', `/${host.getSnapshot().code}`)
+    expect(history.replaceState).toHaveBeenLastCalledWith(null, '', `/?room=${host.getSnapshot().code}`)
     const guest = make(); guest.showJoin('HLMV2K')
-    expect(history.replaceState).toHaveBeenLastCalledWith(null, '', '/HLMV2K')
+    expect(history.replaceState).toHaveBeenLastCalledWith(null, '', '/?room=HLMV2K')
     guest.home()
     expect(history.replaceState).toHaveBeenLastCalledWith(null, '', '/')
   })
