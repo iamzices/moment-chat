@@ -26,7 +26,7 @@ describe('joining with the single code control', () => {
     render(<App />)
     const code = screen.getByRole('textbox', { name: 'Room Code or Invite Link' })
     await user.type(code, 'ab23cd{Enter}')
-    expect(location.search).toBe('?room=AB23CD')
+    expect(location.pathname).toBe('/AB23CD')
     const name = screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement
     expect(name.value).toMatch(/^User\d{4}$/)
     expect(document.activeElement).toBe(name)
@@ -39,10 +39,10 @@ describe('joining with the single code control', () => {
     render(<App />)
     const code = screen.getByRole('textbox', { name: 'Room Code or Invite Link' }) as HTMLInputElement
     await user.type(code, 'xx')
-    await user.paste('https://chat.zices.com/?room=HLMV2K')
-    expect(code.value).toBe('https://chat.zices.com/?room=HLMV2K')
+    await user.paste('https://chat.zices.com/HLMV2K')
+    expect(code.value).toBe('https://chat.zices.com/HLMV2K')
     await user.keyboard('{Enter}')
-    expect(location.search).toBe('?room=HLMV2K')
+    expect(location.pathname).toBe('/HLMV2K')
     expect(screen.getByRole('textbox', { name: 'Name' })).toBeTruthy()
   })
 
@@ -50,7 +50,7 @@ describe('joining with the single code control', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.type(screen.getByRole('textbox', { name: 'Room Code or Invite Link' }), 'abc{Enter}')
-    expect(location.search).toBe('')
+    expect(location.pathname).toBe('/')
     expect(screen.getAllByRole('alert')).toHaveLength(1)
     expect(screen.getByRole('alert').textContent).toContain('6-character')
   })
