@@ -17,7 +17,7 @@ const outcomes: Record<Outcome, string> = {
   ended: 'This room has ended.',
   removed: 'The host removed you from the room.',
   unavailable: 'This room is unavailable.',
-  connection: 'Couldn’t connect to this room.',
+  connection: 'Couldn’t connect to this room. Your network may block peer-to-peer connections.',
   expired: 'Your session has expired.',
   left: 'You left the room.',
 }
