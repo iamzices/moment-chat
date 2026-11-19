@@ -1,5 +1,5 @@
 import Peer, { type BufferedConnection, type DataConnection } from 'peerjs'
-import { PEER_PREFIX, RECONNECT_MS, MAX_PARTICIPANTS, FILE_CHUNK, displayName, fileName, generateCode, isRecord, safeMime, validFiles, validText, validId, type RoomState, type Participant, type ChatMessage, type FileItem, type FileMeta, type Outcome } from './protocol'
+import { PEER_PREFIX, RECONNECT_MS, MAX_PARTICIPANTS, FILE_CHUNK, displayName, fileName, generateCode, isRecord, ROOM_COUNTER, safeMime, validFiles, validText, validId, type RoomState, type Participant, type ChatMessage, type FileItem, type FileMeta, type Outcome } from './protocol'
 
 type Wire = Record<string, unknown>
 interface Transfer { id: string; meta: FileMeta[]; f: number; i: number; received: number; pct: number; parts: Uint8Array<ArrayBuffer>[]; blobs: Blob[] }
@@ -108,7 +108,7 @@ export class RoomEngine {
     this.set({ code, status: 'connecting' })
     history.replaceState(null, '', `/${code}`)
     const peer = this.createPeer(`${PEER_PREFIX}${code}`)
-    peer.on('open', () => { if (!this.stopped && this.peer === peer) this.set({ ...(!this.state.isHost && hostState(this.state.name)), status: 'online', error: '' }) })
+    peer.on('open', () => { if (this.stopped || this.peer !== peer) return; if (this.state.status === 'connecting') fetch(`${ROOM_COUNTER}/up?t=${Math.random()}`).catch(() => {}); this.set({ ...(!this.state.isHost && hostState(this.state.name)), status: 'online', error: '' }) })
     peer.on('connection', connection => this.handleIncoming(connection))
   }
   /**

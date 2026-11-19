@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type DragEvent, type FormEvent, type ReactNode } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Crown, Download, Ellipsis, File as FileIcon, Paperclip, Pencil, Wifi, WifiOff, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Crown, Download, Ellipsis, File as FileIcon, Paperclip, Pencil, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { RoomEngine } from '@/lib/room'
-import { displayName, inviteUrl, MAX_FILES, MAX_MESSAGE_LENGTH, MAX_PARTICIPANTS, parseRoomCode, previewKind, type FileItem, type Outcome, type Participant, type RoomState } from '@/lib/protocol'
+import { displayName, inviteUrl, isRecord, MAX_FILES, MAX_MESSAGE_LENGTH, MAX_PARTICIPANTS, parseRoomCode, previewKind, ROOM_COUNTER, type FileItem, type Outcome, type Participant, type RoomState } from '@/lib/protocol'
 import { cn } from '@/lib/utils'
 
 const outcomes: Record<Outcome, string> = {
@@ -102,6 +102,12 @@ const info: [string, string, string?][] = [
   ['Disappearing Messages', 'Moment keeps no chat history. Messages and files live only in the open browser tabs of the people in the room, and disappear when the room ends.'],
   ['Privacy', 'Moment does not collect any user data. Messages and files are never sent to Moment, and the third-party services that connect browsers may process IP addresses but never message contents.', 'privacy'],
 ]
+function RoomCount() {
+  const [count, setCount] = useState<number>()
+  // Show up_count alone, so anyone calling the public /down cannot shrink it.
+  useEffect(() => { fetch(`${ROOM_COUNTER}?t=${Math.random()}`).then(response => response.json()).then((body: unknown) => { const data = isRecord(body) ? body.data : undefined; if (isRecord(data) && Number.isSafeInteger(data.up_count)) setCount(data.up_count as number) }).catch(() => {}) }, [])
+  return count === undefined ? null : <> <span className="home-brand">{count.toLocaleString('en-US')}</span> rooms created so far.</>
+}
 function HomeInfo() {
   return <>
     <section className="home-info" aria-label="About Moment">{info.map(([title, text, id]) => <div key={title} id={id}><h2>{title}</h2><p>{text}</p></div>)}</section>
@@ -162,7 +168,7 @@ export default function App() {
         {state.screen === 'landing' && <div className="landing-content">
           <div className="home-intro">
             <h1 className="home-title"><span className="home-brand">Moment</span> Chat Rooms</h1>
-            <p className="home-description">Create a private, temporary chat room in one click. No sign-up. No data is collected or stored.</p>
+            <p className="home-description">Create a private, temporary chat room in one click. No sign-up. Moment cannot see your messages.<RoomCount /></p>
           </div>
           <div className="home-actions">
             <Button className="create-action" onClick={() => { setName(displayName('')); engine.createRoom() }}>Create Room</Button>
@@ -198,17 +204,7 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messageEnd = useRef<HTMLDivElement>(null)
-  const lastStatus = useRef(state.status)
-  const [connected, setConnected] = useState(false)
   const link = inviteUrl(state.code)
-  useEffect(() => {
-    // Flash "Connected" briefly instead of letting the banner vanish.
-    const was = lastStatus.current; lastStatus.current = state.status
-    if (state.status !== 'online' || was === 'online') return
-    setConnected(true)
-    const timer = setTimeout(() => setConnected(false), 3000)
-    return () => { clearTimeout(timer); setConnected(false) }
-  }, [state.status])
   // Skip autofocus on touch screens, where it would open the keyboard over the room.
   useEffect(() => { if (window.matchMedia?.('(pointer: fine)').matches) textareaRef.current?.focus() }, [])
   useEffect(() => {
@@ -244,7 +240,6 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
     </div>}
     <main className="chat-main" onDragOver={event => { if (hasFiles(event)) { event.preventDefault(); setDragging(true) } }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false) }} onDrop={event => { if (hasFiles(event)) { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files) } }}>
       {dragging && <div className="drop-target" aria-hidden="true">Drop to Attach</div>}{manualCopy && <div className="manual-copy"><Input aria-label="Invite link" readOnly value={link} onFocus={event => event.target.select()} /><p role="alert">Couldn’t copy the link. Select it and copy it manually.</p></div>}<h1 className="sr-only">Room {state.code}</h1>
-      {(state.status !== 'online' || connected) && <div className="connection-banner" role="status">{state.status === 'online' ? <Wifi aria-hidden="true" /> : <WifiOff aria-hidden="true" />}<span>{state.status === 'online' ? 'Connected to the room.' : state.status === 'connecting' ? 'Connecting to the room…' : state.isHost ? 'Reconnecting. New people may be unable to join.' : 'Reconnecting for up to 2 minutes. Your messages will wait.'}</span></div>}
       <div className="message-scroll" ref={scrollRef} role="log" aria-label="Room messages" aria-live="polite" aria-relevant="additions" onScroll={() => { const el = scrollRef.current; if (el) setScrolledUp(el.scrollHeight - el.scrollTop - el.clientHeight > 100) }}>
         <div className="message-list">
           {state.messages.map((message, index) => {

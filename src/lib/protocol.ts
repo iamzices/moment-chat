@@ -11,6 +11,8 @@ export const MAX_MESSAGE_LENGTH = 4_000
 export const MAX_FILES = 10
 /** Set the raw bytes per file chunk, keeping base64 chunks under PeerJS's 16,300-byte JSON message limit. */
 export const FILE_CHUNK = 10 * 1024
+/** Count rooms on a public CounterAPI counter. */
+export const ROOM_COUNTER = 'https://api.counterapi.dev/v2/moment/rooms-created'
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 /** Describe why a session ended, as shown on the outcome screen. */

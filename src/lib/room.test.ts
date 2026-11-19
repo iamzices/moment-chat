@@ -69,7 +69,7 @@ async function join(host: RoomEngine, name = 'Alex') {
 }
 beforeEach(() => {
   vi.useFakeTimers(); network.peers.clear(); network.blocked.clear(); network.dropAcks = false
-  vi.stubGlobal('history', { replaceState: vi.fn() }); vi.stubGlobal('location', { pathname: '/' })
+  vi.stubGlobal('history', { replaceState: vi.fn() }); vi.stubGlobal('location', { pathname: '/' }); vi.stubGlobal('fetch', vi.fn(async () => ({})))
 })
 afterEach(() => { engines.forEach(engine => engine.cleanup()); engines.length = 0; vi.useRealTimers(); vi.unstubAllGlobals() })
 
@@ -173,6 +173,18 @@ describe('host-star room behavior', () => {
     expect(bob.getSnapshot().outcome).toBe('ended')
     expect(host.getSnapshot().messages).toHaveLength(0)
     expect(bob.getSnapshot().messages).toHaveLength(0)
+  })
+  it('counts each room once when its host claims the code, not on joins or reconnects', async () => {
+    const host = await hostRoom(); await join(host)
+    const peer = network.peers.get(`moment-chat-${host.getSnapshot().code}`)
+    peer.disconnected = true; peer.emit('disconnected')
+    expect(host.getSnapshot().status).toBe('reconnecting')
+    await vi.advanceTimersByTimeAsync(1600)
+    expect(host.getSnapshot().status).toBe('online')
+    const claimer = make(); claimer.showJoin('HLMV2K'); claimer.requestJoin('Sam'); await settle()
+    expect(claimer.getSnapshot().isHost).toBe(true)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/^https:\/\/api\.counterapi\.dev\/v2\/moment\/rooms-created\/up\?t=/))
   })
   it('buffers messages during a brief drop and replays once, even if entry was locked', async () => {
     const host = await hostRoom(), alex = await join(host)

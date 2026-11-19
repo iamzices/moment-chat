@@ -5,8 +5,17 @@ import userEvent from '@testing-library/user-event'
 import App from './App'
 import { RoomEngine } from './lib/room'
 
-beforeEach(() => { history.replaceState(null, '', '/'); vi.spyOn(RoomEngine.prototype, 'requestJoin').mockImplementation(() => {}) })
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+beforeEach(() => { history.replaceState(null, '', '/'); vi.spyOn(RoomEngine.prototype, 'requestJoin').mockImplementation(() => {}); vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => ({ code: '200', data: { up_count: 1234, down_count: 50 } }) }))) })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+
+describe('landing', () => {
+  it('ends the hero description with the public rooms-created count', async () => {
+    render(<App />)
+    const count = await screen.findByText('1,234')
+    expect(count.parentElement?.textContent).toBe('Create a private, temporary chat room in one click. No sign-up. Moment cannot see your messages. 1,234 rooms created so far.')
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/^https:\/\/api\.counterapi\.dev\/v2\/moment\/rooms-created\?t=/))
+  })
+})
 
 describe('joining with the single code control', () => {
   it('cancels a pending join request with Escape', async () => {
