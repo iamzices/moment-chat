@@ -95,12 +95,12 @@ const isMobileLayout = () => window.matchMedia('(max-width: 760px)').matches
 
 const link = (href: string, text: string) => <a href={href} target="_blank" rel="noreferrer">{text}</a>
 const info: [string, string, string?][] = [
-  ['Private Chat Rooms', 'Moment is a free, temporary chat room built and maintained by Zices. Create a room in one click, then share its link or 6-character code. No sign-up, no account, and nothing to install.', 'about'],
-  ['Peer-to-Peer', 'Messages travel between browsers over encrypted WebRTC connections with PeerJS. The host’s browser relays them to everyone else, so there is no message server.'],
-  ['File Sharing', `Attach up to ${MAX_FILES} files to a message by choosing, dragging, or pasting them. Common image, video, and audio formats preview inline; everything else downloads.`],
-  ['Host Controls', `Rooms hold up to ${MAX_PARTICIPANTS} people. The host admits or declines each request to join, or admits everyone automatically, and can lock the room, remove people, or end it for everyone.`],
-  ['Privacy', 'Moment does not collect any user data. Messages and files are transmitted only between participants’ browsers over encrypted connections, are not sent to Moment, and are deleted when the room ends.', 'privacy'],
-  ['Third Parties', 'Moment relies on third-party services that may process IP addresses but never message contents.'],
+  ['Free Private Chat Rooms', 'Moment is a free, private chat room built and maintained by Zices. There’s no account, email, or phone number to give, and nothing to download: it works in any modern browser on desktop and mobile.', 'about'],
+  ['How It Works', `Click Create Room and share the invite link or 6-character room code. Rooms hold up to ${MAX_PARTICIPANTS} people. The host can approve each request to join, lock the room, remove people, and end it for everyone.`],
+  ['Peer-to-Peer Encrypted Chat', 'Messages travel between participants’ browsers over encrypted WebRTC connections, with the host’s browser passing them on to the group. There is no chat server, so conversations never pass through Moment.'],
+  ['Private File Sharing', `Send photos, videos, and documents by choosing, dragging, or pasting them, up to ${MAX_FILES} files per message. Files travel peer-to-peer like messages, so they are never uploaded to a server.`],
+  ['Disappearing Messages', 'Moment keeps no chat history. Messages and files live only in the open browser tabs of the people in the room, and disappear when the room ends.'],
+  ['Privacy', 'Moment does not collect any user data. Messages and files are never sent to Moment, and the third-party services that connect browsers may process IP addresses but never message contents.', 'privacy'],
 ]
 function HomeInfo() {
   return <>
@@ -146,7 +146,7 @@ export default function App() {
     if (state.screen !== 'room') { setUnread(0); seenIds.current.clear() }
   }, [state.messages, state.selfId, state.screen])
   useEffect(() => {
-    document.title = state.screen === 'room' ? `${unread ? `(${unread}) ` : ''}${state.code} · Moment` : 'Moment | Private Chat Rooms, No Sign-Up'
+    document.title = state.screen === 'room' ? `${unread ? `(${unread}) ` : ''}${state.code} · Moment` : 'Moment | Free Private Chat Rooms, No Sign-Up'
   }, [unread, state.code, state.screen])
   function openJoin(event: FormEvent) {
     event.preventDefault()
