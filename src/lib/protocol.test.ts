@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { displayName, fileName, generateCode, inviteUrl, MAX_FILE_SIZE, MAX_MESSAGE_LENGTH, parseRoomCode, previewKind, validFiles, validText } from './protocol'
+import { displayName, fileName, generateCode, inviteUrl, MAX_MESSAGE_LENGTH, parseRoomCode, previewKind, validFiles, validText } from './protocol'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -44,8 +44,7 @@ describe('room input boundaries', () => {
     expect(validFiles([file])).toBe(true)
     expect(validFiles([])).toBe(false)
     expect(validFiles(Array(11).fill(file))).toBe(false)
-    expect(validFiles([{ ...file, size: MAX_FILE_SIZE }, { ...file, size: MAX_FILE_SIZE }])).toBe(true)
-    expect(validFiles([{ ...file, size: MAX_FILE_SIZE + 1 }])).toBe(false)
+    expect(validFiles([{ ...file, size: 2 ** 40 }])).toBe(true)
     expect(validFiles([{ ...file, size: 0 }])).toBe(false)
     expect(validFiles([{ ...file, name: 7 }])).toBe(false)
     expect(fileName('\u202egpj.exe')).toBe('gpj.exe')

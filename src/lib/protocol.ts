@@ -9,8 +9,6 @@ export const MAX_PARTICIPANTS = 8
 export const MAX_MESSAGE_LENGTH = 4_000
 /** Cap the number of files attached to one message. */
 export const MAX_FILES = 10
-/** Cap the size of each attached file, in bytes. */
-export const MAX_FILE_SIZE = 100 * 1024 * 1024
 /** Set the raw bytes per file chunk, keeping base64 chunks under PeerJS's 16,300-byte JSON message limit. */
 export const FILE_CHUNK = 10 * 1024
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -92,12 +90,12 @@ export function validText(value: unknown): value is string {
 /**
  * Check that an untrusted value is a well-formed, in-limit list of file metadata.
  * @param value - Any inbound value.
- * @returns True for 1 to `MAX_FILES` entries with valid names, MIME types, and sizes from 1 byte to `MAX_FILE_SIZE`.
+ * @returns True for 1 to `MAX_FILES` entries with valid names, MIME types, and positive integer sizes.
  */
 export function validFiles(value: unknown): value is FileMeta[] {
   return Array.isArray(value) && value.length > 0 && value.length <= MAX_FILES && value.every(file => isRecord(file)
     && typeof file.name === 'string' && file.name.length > 0 && file.name.length <= 255 && typeof file.mime === 'string' && file.mime.length <= 100
-    && Number.isSafeInteger(file.size) && (file.size as number) >= 1 && (file.size as number) <= MAX_FILE_SIZE)
+    && Number.isSafeInteger(file.size) && (file.size as number) >= 1)
 }
 /**
  * Clean an untrusted file name for display and download.

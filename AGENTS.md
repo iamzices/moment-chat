@@ -14,12 +14,12 @@ Moment: browser-only, peer-to-peer temporary chat room (React 19 + Vite + PeerJS
 - No new network endpoints or third-party scripts without asking.
 
 ## Architecture
-- `src/lib/protocol.ts`: types, limits (`MAX_PARTICIPANTS`, `MAX_MESSAGE_LENGTH`, `MAX_FILES`, `MAX_FILE_SIZE`, `FILE_CHUNK`, `RECONNECT_MS`), validators, name sanitizers, room-code parsing.
+- `src/lib/protocol.ts`: types, limits (`MAX_PARTICIPANTS`, `MAX_MESSAGE_LENGTH`, `MAX_FILES`, `FILE_CHUNK`, `RECONNECT_MS`), validators, name sanitizers, room-code parsing.
 - `src/lib/room.ts`: `RoomEngine`, the whole room state machine. Star topology: guests connect only to the host, and the host relays messages, renames, file chunks, and roster updates to everyone.
 - Files ride the same JSON data channel: a `message` carries `files` metadata, then base64 `chunk`s follow in order (`FILE_CHUNK` keeps each under PeerJS's 16,300-byte limit). Guests ack a file event only after its bytes arrive, so the host resends unacked files after a reconnect.
 - `src/App.tsx`: all screens. It reads the engine via `useSyncExternalStore(engine.subscribe, engine.getSnapshot)`.
 - `src/components/ui/`: shadcn-style primitives. There is no shadcn CLI config, so edit them by hand.
-- Dialogs: static info (About, Privacy) uses a native `<dialog>` via `showModal()`; interactive ones (people, confirmations) use the Radix `Dialog`.
+- Dialogs (people, confirmations) use the Radix `Dialog`. About and Privacy are not dialogs: they sit in the landing info grid below the hero so search engines index them, and the hero links jump to `#about` and `#privacy`.
 - Peer IDs are `PEER_PREFIX + roomCode`. Invite links are `/<CODE>`, which works on Pages only because CI copies `index.html` to `404.html`.
 - Joining claims the code's peer ID first: if nobody hosts it, the joiner becomes host; otherwise PeerJS returns `unavailable-id` and the tab joins as a guest. So any code (e.g. from a bot) works as a link before the room exists, and simultaneous joiners get exactly one host.
 
@@ -37,7 +37,7 @@ Moment: browser-only, peer-to-peer temporary chat room (React 19 + Vite + PeerJS
 - High contrast, dark only. Surfaces step up in lightness: `--background` (page) → `--card` (sidebar, bubbles, inputs, dialogs) → `--secondary` (own bubbles, menus, raised controls) → `--accent` (hover).
 - Text: `--foreground` for content and headings; `--muted-foreground` only for secondary details (counts, timestamps, "(you)", "Away"). Keep ≥ 4.5:1 on every surface.
 - `--primary` (#8fd0ff) is the single accent: primary buttons, links, focus, host crown, brand. `--violet` only tints the landing bubbles for own messages. `--danger` only for errors.
-- Borders only on interactive controls (inputs, composer, outline buttons), using `--border`, which keeps ≥ 3:1 on every surface. No decorative dividers: separate sections with spacing or a surface step.
+- Borders only on interactive controls (inputs, composer, outline buttons), using `--border`, which keeps ≥ 3:1 on every surface. No decorative dividers: separate sections with spacing or a surface step. The one exception is the landing footer's `--secondary` top rule, which matches the other zices.com tools exactly.
 - People are told apart by name only: no avatars or initial circles. Names (sidebar, message sender, rename and name inputs) always use `--font-mono`. The host is marked with the crown icon, not a pill.
 - Fonts are bundled so every device renders the same: DM Sans (`--font-sans`, everything) and DM Mono (`--font-mono`, names only). Don't add system font fallbacks.
 - No all-caps micro-labels, no outlined pills or badges.

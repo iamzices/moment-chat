@@ -413,7 +413,7 @@ export class RoomEngine {
   /**
    * Send a message with optional attachments to everyone in the room.
    * @param text - The message text; may be empty when files are attached.
-   * @param files - Up to `MAX_FILES` files, each up to `MAX_FILE_SIZE`; guests can attach only while online.
+   * @param files - Up to `MAX_FILES` non-empty files; guests can attach only while online.
    * @returns True if the message was accepted for sending.
    */
   sendMessage(text: string, files: File[] = []): boolean {

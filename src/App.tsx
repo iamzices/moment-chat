@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type DragEvent, type FormEvent, type ReactNode, type RefObject } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type DragEvent, type FormEvent, type ReactNode } from 'react'
 import { ArrowDown, ArrowLeft, ArrowRight, Check, Copy, Crown, Download, Ellipsis, File as FileIcon, Paperclip, Pencil, Wifi, WifiOff, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { RoomEngine } from '@/lib/room'
-import { displayName, inviteUrl, MAX_FILES, MAX_MESSAGE_LENGTH, MAX_PARTICIPANTS, MAX_FILE_SIZE, parseRoomCode, previewKind, type FileItem, type Outcome, type Participant, type RoomState } from '@/lib/protocol'
+import { displayName, inviteUrl, MAX_FILES, MAX_MESSAGE_LENGTH, MAX_PARTICIPANTS, parseRoomCode, previewKind, type FileItem, type Outcome, type Participant, type RoomState } from '@/lib/protocol'
 import { cn } from '@/lib/utils'
 
 const outcomes: Record<Outcome, string> = {
@@ -93,32 +93,20 @@ function subscribeToLayout(listener: () => void) {
 }
 const isMobileLayout = () => window.matchMedia('(max-width: 760px)').matches
 
-// Use native <dialog> so closed content stays indexable and the browser handles focus and Escape.
-function InfoDialog({ dialogRef, title, children }: { dialogRef: RefObject<HTMLDialogElement | null>; title: string; children: ReactNode }) {
-  const id = useId()
-  return <dialog ref={dialogRef} className="info-dialog" aria-labelledby={id} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close() }}>
-    <Button variant="ghost" size="icon" className="dialog-close" onClick={() => dialogRef.current?.close()} aria-label="Close"><X aria-hidden="true" /></Button>
-    <div className="info-dialog-body"><h2 id={id}>{title}</h2>{children}</div>
-  </dialog>
-}
-
-function PrivacyDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
-  return <InfoDialog dialogRef={dialogRef} title="Privacy">
-    {([
-      ['', 'Moment does not collect any user data. Messages and files are transmitted only between participants’ browsers over encrypted connections, are not sent to Moment, and are deleted when the room ends.'],
-      ['Third Parties', 'Moment relies on third-party services that may process IP addresses but never message contents. PeerJS operates the signaling service that connects participants and also processes room codes. Google and Twilio operate connection servers that allow browsers to connect across networks. GitHub Pages and Cloudflare host the website and may log page requests, including invite links.'],
-    ] as [string, ReactNode][]).map(([title, text], index) => <div className="privacy-item about-item" key={index}><div>{title && <h3>{title}</h3>}<p>{text}</p></div></div>)}
-  </InfoDialog>
-}
-
-function AboutDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | null> }) {
-  const link = (href: string, text: string) => <a href={href} target="_blank" rel="noreferrer">{text}</a>
-  return <InfoDialog dialogRef={dialogRef} title="About">
-    <div className="privacy-item about-item">
-      <p>Moment is a private, temporary chat room built and maintained by Zices. No data is collected or stored. Messages travel peer-to-peer over WebRTC with {link('https://peerjs.com/', 'PeerJS')}.</p>
-      <p>Moment is {link('https://github.com/iamzices/moment-chat', 'open source on GitHub')}. Find Zices on GitHub as {link('https://github.com/iamzices', '@iamzices')}, or see more projects at {link('https://zices.com', 'zices.com')}.</p>
-    </div>
-  </InfoDialog>
+const link = (href: string, text: string) => <a href={href} target="_blank" rel="noreferrer">{text}</a>
+const info: [string, string, string?][] = [
+  ['Private Chat Rooms', 'Moment is a free, temporary chat room built and maintained by Zices. Create a room in one click, then share its link or 6-character code. No sign-up, no account, and nothing to install.', 'about'],
+  ['Peer-to-Peer', 'Messages travel between browsers over encrypted WebRTC connections with PeerJS. The host’s browser relays them to everyone else, so there is no message server.'],
+  ['File Sharing', `Attach up to ${MAX_FILES} files to a message by choosing, dragging, or pasting them. Common image, video, and audio formats preview inline; everything else downloads.`],
+  ['Host Controls', `Rooms hold up to ${MAX_PARTICIPANTS} people. The host admits or declines each request to join, or admits everyone automatically, and can lock the room, remove people, or end it for everyone.`],
+  ['Privacy', 'Moment does not collect any user data. Messages and files are transmitted only between participants’ browsers over encrypted connections, are not sent to Moment, and are deleted when the room ends.', 'privacy'],
+  ['Third Parties', 'Moment relies on third-party services that may process IP addresses but never message contents.'],
+]
+function HomeInfo() {
+  return <>
+    <section className="home-info" aria-label="About Moment">{info.map(([title, text, id]) => <div key={title} id={id}><h2>{title}</h2><p>{text}</p></div>)}</section>
+    <footer className="home-footer">Moment is {link('https://github.com/iamzices/moment-chat', 'open source on GitHub')}. Find Zices on GitHub as {link('https://github.com/iamzices', '@iamzices')}, or see more projects at {link('https://zices.com', 'zices.com')}.</footer>
+  </>
 }
 
 /**
@@ -128,8 +116,6 @@ function AboutDialog({ dialogRef }: { dialogRef: RefObject<HTMLDialogElement | n
 export default function App() {
   const [engine] = useState(() => new RoomEngine())
   const state = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
-  const privacyRef = useRef<HTMLDialogElement>(null)
-  const aboutRef = useRef<HTMLDialogElement>(null)
   const [joinCode, setJoinCode] = useState('')
   const [joinError, setJoinError] = useState('')
   const [name, setName] = useState(() => displayName(''))
@@ -187,15 +173,14 @@ export default function App() {
               {joinError && <p className="sr-only" id="join-error" role="alert">{joinError}</p>}
             </form>
           </div>
-          <nav className="home-information" aria-label="About and privacy"><Button variant="ghost" onClick={() => aboutRef.current?.showModal()}>About</Button><Button variant="ghost" onClick={() => privacyRef.current?.showModal()}>Privacy</Button></nav>
+          <nav className="home-information" aria-label="About and privacy"><a href="#about">About</a><a href="#privacy">Privacy</a></nav>
         </div>}
         {state.screen === 'join' && <div className="flow-card"><Button variant="ghost" size="icon" className="back-button" onClick={() => engine.home()} aria-label="Back to home"><ArrowLeft aria-hidden="true" /></Button><h1 className="sr-only">Join Room</h1><div className="room-code-pill" role="group" aria-label="Room code"><strong>{state.code}</strong></div><form onSubmit={event => { event.preventDefault(); engine.requestJoin(name) }} className="name-form"><Label htmlFor="display-name" className="sr-only">Name</Label><Input id="display-name" className="person-name" autoFocus maxLength={32} autoComplete="off" value={name} onChange={event => setName(event.target.value)} onFocus={event => event.target.select()} /><Button className="primary-action" type="submit">Join Room<ArrowRight aria-hidden="true" /></Button></form></div>}
         {state.screen === 'waiting' && <div className="flow-card waiting-card"><p className="waiting-room-code">{state.code}</p><h1 role="status">{state.status === 'connecting' ? 'Connecting…' : 'Waiting for host approval'}</h1><Button className="cancel-button" variant="outline" onClick={() => engine.cancel()}>Cancel</Button></div>}
         {state.screen === 'outcome' && <div className="outcome-screen"><h1>{outcomes[state.outcome || 'ended']}</h1><Button className="outcome-button" autoFocus onClick={() => { setJoinCode(''); setName(displayName('')); engine.home() }}>Back to Home<ArrowRight aria-hidden="true" /></Button></div>}
       </main>
+      {state.screen === 'landing' && <HomeInfo />}
     </>}
-    <AboutDialog dialogRef={aboutRef} />
-    <PrivacyDialog dialogRef={privacyRef} />
   </div>
 }
 
@@ -238,9 +223,9 @@ function Room({ state, engine }: { state: RoomState; engine: RoomEngine }) {
     if (engine.sendMessage(draft.trim(), attachments)) { setDraft(''); setAttachments([]); setAttachError(''); setScrolledUp(false); textareaRef.current?.focus() }
   }
   function addFiles(list: FileList) {
-    const added = [...list].filter(file => file.size > 0), fitting = added.filter(file => file.size <= MAX_FILE_SIZE)
-    setAttachError(fitting.length < added.length || attachments.length + fitting.length > MAX_FILES ? 'Attach up to 10 files, each up to 100 MB.' : '')
-    setAttachments(current => [...current, ...fitting].slice(0, MAX_FILES))
+    const added = [...list].filter(file => file.size > 0)
+    setAttachError(attachments.length + added.length > MAX_FILES ? `Attach up to ${MAX_FILES} files.` : '')
+    setAttachments(current => [...current, ...added].slice(0, MAX_FILES))
     textareaRef.current?.focus()
   }
   const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files')
